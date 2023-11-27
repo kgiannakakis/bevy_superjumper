@@ -2,12 +2,12 @@ use crate::{cleanup, click_sound, GameState};
 use bevy::prelude::*;
 
 #[derive(Resource, Default)]
-pub struct HelpScreen(usize);
+pub struct HelpScreenIndex(usize);
 
 pub struct HelpPlugin;
 impl Plugin for HelpPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<HelpScreen>()
+        app.init_resource::<HelpScreenIndex>()
             .add_systems(OnEnter(GameState::Help), setup_help)
             .add_systems(OnExit(GameState::Help), cleanup::<HelpEntity>)
             .add_systems(
@@ -15,8 +15,8 @@ impl Plugin for HelpPlugin {
                 (
                     show_next_screen.run_if(in_state(GameState::Help).and_then(has_user_input)),
                     click_sound.run_if(
-                        resource_changed::<HelpScreen>()
-                            .and_then(not(resource_added::<HelpScreen>())),
+                        resource_changed::<HelpScreenIndex>()
+                            .and_then(not(resource_added::<HelpScreenIndex>())),
                     ),
                 ),
             );
@@ -40,7 +40,7 @@ fn setup_help(mut commands: Commands, asset_server: Res<AssetServer>) {
 fn show_next_screen(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut help_screen: ResMut<HelpScreen>,
+    mut help_screen: ResMut<HelpScreenIndex>,
     mut state: ResMut<NextState<GameState>>,
 ) {
     help_screen.0 += 1;

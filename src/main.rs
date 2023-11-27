@@ -45,6 +45,7 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
+        .init_resource::<SoundDisabled>()
         .add_state::<GameState>()
         .add_systems(Startup, (scene_setup, play_music))
         // .add_plugin(game::GamePlugin)

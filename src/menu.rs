@@ -5,13 +5,12 @@ use bevy::{prelude::*, window::PrimaryWindow};
 struct MenuEntity;
 
 #[derive(Component)]
-struct SoundButtonEntity;
+struct SoundButton;
 
 pub struct MenuPlugin;
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<SoundDisabled>()
-            .add_systems(OnEnter(GameState::Menu), setup_menu)
+        app.add_systems(OnEnter(GameState::Menu), setup_menu)
             .add_systems(
                 OnExit(GameState::Menu),
                 (click_sound, cleanup::<MenuEntity>),
@@ -30,7 +29,11 @@ impl Plugin for MenuPlugin {
     }
 }
 
-fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup_menu(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    sound_disabled: ResMut<SoundDisabled>,
+) {
     commands.spawn((
         SpriteBundle {
             texture: asset_server.load("sprites/logo.png"),
@@ -49,14 +52,7 @@ fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
         MenuEntity,
     ));
 
-    commands.spawn((
-        SpriteBundle {
-            texture: asset_server.load("sprites/soundOn.png"),
-            transform: Transform::from_xyz(-160.0 + 10.0 + 32.0, -240.0 + 10.0 + 32.0, 100.0),
-            ..Default::default()
-        },
-        (MenuEntity, SoundButtonEntity),
-    ));
+    spawn_sound_button(commands, asset_server, sound_disabled);
 }
 
 fn start_playing(mut state: ResMut<NextState<GameState>>) {
@@ -153,30 +149,34 @@ fn toggle_pause_music(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut sound_disabled: ResMut<SoundDisabled>,
-    sound_button_query: Query<Entity, With<SoundButtonEntity>>,
+    sound_button_query: Query<Entity, With<SoundButton>>,
     music_query: Query<&AudioSink, With<GameMusic>>,
 ) {
     if let Ok(sink) = music_query.get_single() {
         sink.toggle();
     }
 
-    sound_disabled.0 = !sound_disabled.0;
+    commands.entity(sound_button_query.single()).despawn();
 
+    sound_disabled.0 = !sound_disabled.0;
+    spawn_sound_button(commands, asset_server, sound_disabled);
+}
+
+fn spawn_sound_button(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    sound_disabled: ResMut<SoundDisabled>,
+) {
     let path = match sound_disabled.0 {
         true => "sprites/soundOff.png",
         false => "sprites/soundOn.png",
     };
-
-    for sound_button_entity in &sound_button_query {
-        commands.entity(sound_button_entity).despawn();
-    }
-
     commands.spawn((
         SpriteBundle {
             texture: asset_server.load(path),
             transform: Transform::from_xyz(-160.0 + 10.0 + 32.0, -240.0 + 10.0 + 32.0, 100.0),
             ..Default::default()
         },
-        (MenuEntity, SoundButtonEntity),
+        (MenuEntity, SoundButton),
     ));
 }

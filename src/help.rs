@@ -1,6 +1,9 @@
 use crate::{cleanup, click_sound, GameState};
 use bevy::prelude::*;
 
+#[derive(Component)]
+struct HelpEntity;
+
 #[derive(Resource, Default)]
 pub struct HelpScreenIndex(usize);
 
@@ -22,9 +25,6 @@ impl Plugin for HelpPlugin {
             );
     }
 }
-
-#[derive(Component)]
-struct HelpEntity;
 
 fn setup_help(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((

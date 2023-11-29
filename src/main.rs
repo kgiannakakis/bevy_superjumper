@@ -2,6 +2,7 @@
 
 use bevy::{audio::Volume, prelude::*, window::WindowResolution};
 
+mod game;
 mod help;
 mod menu;
 
@@ -21,7 +22,7 @@ struct GameMusic;
 #[derive(Resource)]
 struct AudioHandles {
     click: Handle<AudioSource>,
-    // coin: Handle<AudioSource>,
+    coin: Handle<AudioSource>,
     // jump: Handle<AudioSource>,
     // highjump: Handle<AudioSource>,
     // hit: Handle<AudioSource>,
@@ -48,9 +49,7 @@ fn main() {
         .init_resource::<SoundDisabled>()
         .add_state::<GameState>()
         .add_systems(Startup, (scene_setup, play_music))
-        // .add_plugin(game::GamePlugin)
-        // .add_plugin(game_over::GameOverPlugin)
-        .add_plugins((menu::MenuPlugin, help::HelpPlugin))
+        .add_plugins((menu::MenuPlugin, help::HelpPlugin, game::GamePlugin))
         .run();
 }
 
@@ -66,7 +65,7 @@ fn scene_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     // Load audio files
     commands.insert_resource(AudioHandles {
-        // coin: asset_server.load("audio/coin.ogg"),
+        coin: asset_server.load("audio/coin.ogg"),
         // hit: asset_server.load("audio/hit.ogg"),
         // jump: asset_server.load("audio/jump.ogg"),
         // highjump: asset_server.load("audio/highjump.ogg"),

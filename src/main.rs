@@ -4,6 +4,7 @@ use bevy::{audio::Volume, prelude::*, window::WindowResolution};
 
 mod game;
 mod help;
+mod highscores;
 mod menu;
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
@@ -49,7 +50,12 @@ fn main() {
         .init_resource::<SoundDisabled>()
         .add_state::<GameState>()
         .add_systems(Startup, (scene_setup, play_music))
-        .add_plugins((menu::MenuPlugin, help::HelpPlugin, game::GamePlugin))
+        .add_plugins((
+            menu::MenuPlugin,
+            help::HelpPlugin,
+            game::GamePlugin,
+            highscores::HighScoresPlugin,
+        ))
         .run();
 }
 

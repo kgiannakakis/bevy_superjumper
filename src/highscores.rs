@@ -28,6 +28,60 @@ fn setup_highscores(mut commands: Commands, asset_server: Res<AssetServer>) {
         },
         HighScoresEntity,
     ));
+
+    commands
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    flex_direction: FlexDirection::Column,
+                    ..default()
+                },
+                ..default()
+            },
+            HighScoresEntity,
+        ))
+        .with_children(|parent| {
+            parent.spawn(
+                TextBundle::from_section(
+                    "HIGHSCORES",
+                    TextStyle {
+                        font: asset_server.load("fonts/Retroville NC.ttf"),
+                        font_size: 40.0,
+                        color: Color::WHITE,
+                    },
+                )
+                .with_text_alignment(TextAlignment::Center),
+            );
+
+            parent
+                .spawn(NodeBundle {
+                    style: Style {
+                        flex_direction: FlexDirection::Column,
+                        align_items: AlignItems::FlexStart,
+                        ..default()
+                    },
+                    ..default()
+                })
+                .with_children(|parent| {
+                    for i in 1..6 {
+                        parent.spawn(
+                            TextBundle::from_section(
+                                format!("{}. {}", i, 100 - (i - 1) * 20),
+                                TextStyle {
+                                    font: asset_server.load("fonts/Retroville NC.ttf"),
+                                    font_size: 30.0,
+                                    color: Color::WHITE,
+                                },
+                            )
+                            .with_text_alignment(TextAlignment::Left),
+                        );
+                    }
+                });
+        });
 }
 
 pub fn has_clicked_back(

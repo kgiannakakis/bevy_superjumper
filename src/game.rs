@@ -14,10 +14,10 @@ pub struct Points(usize);
 enum PlayState {
     #[default]
     Ready,
-    Running,
-    Paused,
-    LevelEnd,
-    GameOver,
+    // Running,
+    // Paused,
+    // LevelEnd,
+    // GameOver,
 }
 
 pub struct GamePlugin;
@@ -33,9 +33,12 @@ impl Plugin for GamePlugin {
                     coin_sound.run_if(
                         resource_changed::<Points>().and_then(not(resource_added::<Points>())),
                     ),
-                    bob::animate_bob.run_if(in_state(GameState::Playing)),
-                    coin::animate_coins.run_if(in_state(GameState::Playing)),
-                ),
+                    bob::animate_bob,
+                    bob::update_bob,
+                    bob::move_bob,
+                    coin::animate_coins,
+                )
+                    .run_if(in_state(GameState::Playing)),
             );
     }
 }

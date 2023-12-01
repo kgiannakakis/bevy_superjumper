@@ -51,6 +51,8 @@ fn main() {
         .add_state::<GameState>()
         .add_systems(Startup, (scene_setup, play_music))
         .add_plugins((
+            //bevy::diagnostic::LogDiagnosticsPlugin::default(),
+            //bevy::diagnostic::FrameTimeDiagnosticsPlugin::default(),
             menu::MenuPlugin,
             help::HelpPlugin,
             game::GamePlugin,

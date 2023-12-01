@@ -3,6 +3,7 @@ use bevy::prelude::*;
 
 mod bob;
 mod coin;
+mod platform;
 
 #[derive(Component)]
 struct GameEntity;
@@ -37,6 +38,7 @@ impl Plugin for GamePlugin {
                     bob::update_bob,
                     bob::move_bob,
                     coin::animate_coins,
+                    platform::animate_platforms,
                 )
                     .run_if(in_state(GameState::Playing)),
             );
@@ -55,6 +57,14 @@ fn setup_play(
         &asset_server,
         &mut texture_atlases,
         Vec2::new(0.0, 120.0),
+    );
+
+    platform::spawn_platform(
+        &mut commands,
+        &asset_server,
+        &mut texture_atlases,
+        platform::PlatformType::Moving,
+        Vec2::new(30.0, -60.0),
     );
 
     // Spawn the score UI

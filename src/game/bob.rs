@@ -6,10 +6,11 @@ pub const BOB_JUMP_VELOCITY: f32 = 400.0; // 11
 const BOB_MOVE_VELOCITY: f32 = 500.0; // 20
 const ACCELERATION_X: f32 = 0.5;
 pub const GRAVITY_Y: f32 = -480.0; // -12
+pub const BOB_SIZE: Vec2 = Vec2::new(32.0, 32.0);
 
 #[derive(Component, Default)]
 pub struct Bob {
-    velocity: Vec2,
+    pub velocity: Vec2,
 }
 
 pub(super) fn setup_bob(

@@ -1,6 +1,6 @@
 use rand::Rng;
 
-use super::{bob, platform};
+use super::{bob, coin, platform};
 
 const WORLD_WIDTH: f32 = 10.0 * 32.0;
 const WORLD_HEIGHT: f32 = 2.0 * 32.0 * 20.0;
@@ -12,9 +12,9 @@ pub enum GameObjectType {
     Spring,
 }
 pub struct GameObject {
-    object_type: GameObjectType,
-    x: f32,
-    y: f32,
+    pub object_type: GameObjectType,
+    pub x: f32,
+    pub y: f32,
 }
 
 pub fn generate_level() -> Vec<GameObject> {
@@ -33,6 +33,14 @@ pub fn generate_level() -> Vec<GameObject> {
             x,
             y,
         });
+
+        if rng.gen_range(0.0..1.0) > 0.6 {
+            objects.push(GameObject {
+                object_type: GameObjectType::Coin,
+                x: x + rng.gen_range(0.0..1.0) * 32.0,
+                y: y + coin::COIN_HEIGHT + rng.gen_range(0.0..1.0) * 32.0 * 3.0,
+            });
+        }
 
         y += max_jump_height - 0.5 * 32.0;
         y -= rng.gen_range(0.0..1.0) * (max_jump_height / 3.0);

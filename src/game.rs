@@ -1,6 +1,8 @@
 use crate::{cleanup, AudioHandles, GameState, SoundDisabled};
-use bevy::prelude::*;
-use rand::Rng;
+use bevy::{prelude::*, sprite::collide_aabb::collide};
+
+use bob::Bob;
+use platform::Platform;
 
 mod bob;
 mod coin;
@@ -41,53 +43,49 @@ impl Plugin for GamePlugin {
                     bob::move_bob,
                     coin::animate_coins,
                     platform::animate_platforms,
+                    check_platform_collisions,
                 )
                     .run_if(in_state(GameState::Playing)),
             );
     }
 }
 
-const WORLD_WIDTH: f32 = 10.0 * 32.0;
-const WORLD_HEIGHT: f32 = 2.0 * 32.0 * 20.0;
-
 fn setup_play(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
-    let mut y: f32 = platform::PLATFORM_HEIGHT / 2.0;
-    let max_jump_height: f32 =
-        bob::BOB_JUMP_VELOCITY * bob::BOB_JUMP_VELOCITY / (2.0 * -bob::GRAVITY_Y);
-    let mut rng = rand::thread_rng();
-    while y < WORLD_HEIGHT - WORLD_WIDTH / 2.0 {
-        let moving_platform = rng.gen_range(0.0..1.0) > 0.8;
-        let x = rng.gen_range(0.0..1.0) * (WORLD_WIDTH - platform::PLATFORM_WIDTH)
-            + platform::PLATFORM_WIDTH / 2.0;
+    let objects = level::generate_level();
 
-        platform::spawn_platform(
-            &mut commands,
-            &asset_server,
-            &mut texture_atlases,
-            if moving_platform {
-                platform::PlatformType::Moving
-            } else {
-                platform::PlatformType::Static
-            },
-            Vec2::new(x - 160.0, y - 240.0),
-        );
-
-        y += max_jump_height - 0.5 * 32.0;
-        y -= rng.gen_range(0.0..1.0) * (max_jump_height / 3.0);
+    for object in &objects {
+        match object.object_type {
+            level::GameObjectType::Platform(moving) => {
+                platform::spawn_platform(
+                    &mut commands,
+                    &asset_server,
+                    &mut texture_atlases,
+                    if moving {
+                        platform::PlatformType::Moving
+                    } else {
+                        platform::PlatformType::Static
+                    },
+                    Vec2::new(object.x - 160.0, object.y - 240.0),
+                );
+            }
+            level::GameObjectType::Squirrel => todo!(),
+            level::GameObjectType::Coin => {
+                coin::spawn_coin(
+                    &mut commands,
+                    &asset_server,
+                    &mut texture_atlases,
+                    Vec2::new(object.x - 160.0, object.y - 240.0),
+                );
+            }
+            level::GameObjectType::Spring => todo!(),
+        }
     }
 
     bob::setup_bob(&mut commands, &asset_server, &mut texture_atlases);
-
-    coin::spawn_coin(
-        &mut commands,
-        &asset_server,
-        &mut texture_atlases,
-        Vec2::new(0.0, 120.0),
-    );
 
     // Spawn the score UI
     commands
@@ -114,6 +112,32 @@ fn setup_play(
             )
             .with_text_alignment(TextAlignment::Center),));
         });
+}
+
+fn check_platform_collisions(
+    mut bob_query: Query<(&Transform, &mut Bob), With<Bob>>,
+    mut platforms_query: Query<(&Transform, &mut Platform), With<Platform>>,
+) {
+    for (&bob_transform, mut bob) in &mut bob_query {
+        if bob.velocity.y > 0.0 {
+            return;
+        }
+
+        for (&platform_transform, mut platform) in &mut platforms_query {
+            if collide(
+                bob_transform.translation,
+                bob::BOB_SIZE,
+                platform_transform.translation,
+                platform::PLATFORM_SIZE,
+            )
+            .is_some()
+            {
+                bob.velocity.y += bob::BOB_JUMP_VELOCITY;
+                platform.state = platform::PlatformState::Pulverizing;
+                return;
+            }
+        }
+    }
 }
 
 fn coin_sound(

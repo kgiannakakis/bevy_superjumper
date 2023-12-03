@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use bevy::{audio::Volume, prelude::*, render::camera::ScalingMode, window::WindowResolution};
+use bevy::{audio::Volume, prelude::*, window::WindowResolution};
 
 mod game;
 mod help;
@@ -63,7 +63,7 @@ fn main() {
 
 fn scene_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Spawn a 2D camera
-    let mut game_2d_camera_bundle = Camera2dBundle::default();
+    let game_2d_camera_bundle = Camera2dBundle::default();
     commands.spawn(game_2d_camera_bundle);
 
     // Spawn the background sprite

@@ -4,6 +4,7 @@ use bevy::prelude::*;
 const PLATFORM_ANIMATION_SPEED: f32 = 10.0;
 pub const PLATFORM_HEIGHT: f32 = 16.0;
 pub const PLATFORM_WIDTH: f32 = 64.0;
+pub const PLATFORM_SIZE: Vec2 = Vec2::new(PLATFORM_WIDTH, PLATFORM_HEIGHT);
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash)]
 pub enum PlatformType {
@@ -13,7 +14,7 @@ pub enum PlatformType {
 }
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash)]
-enum PlatformState {
+pub enum PlatformState {
     #[default]
     Normal,
     Pulverizing,
@@ -23,7 +24,7 @@ enum PlatformState {
 #[derive(Component, Default)]
 pub struct Platform {
     platform_type: PlatformType,
-    state: PlatformState,
+    pub state: PlatformState,
 }
 
 pub(super) fn spawn_platform(

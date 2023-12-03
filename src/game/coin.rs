@@ -2,6 +2,9 @@ use super::GameEntity;
 use bevy::prelude::*;
 
 const COIN_ANIMATION_SPEED: f32 = 10.0;
+pub const COIN_HEIGHT: f32 = 0.8 * 32.0;
+//pub const COIN_WIDTH: f32 = 0.5 * 32.0;
+//pub const COIN_SCORE: u32 = 10;
 
 #[derive(Component, Default)]
 pub struct Coin;

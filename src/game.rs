@@ -132,7 +132,7 @@ fn check_platform_collisions(
             )
             .is_some()
             {
-                bob.velocity.y += bob::BOB_JUMP_VELOCITY;
+                bob.velocity.y = bob::BOB_JUMP_VELOCITY;
                 platform.state = platform::PlatformState::Pulverizing;
                 return;
             }

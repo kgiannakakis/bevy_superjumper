@@ -18,7 +18,6 @@ pub enum PlatformState {
     #[default]
     Normal,
     Pulverizing,
-    Pulverized,
 }
 
 #[derive(Component, Default)]
@@ -61,14 +60,15 @@ pub(super) fn spawn_platform(
 }
 
 pub(super) fn animate_platforms(
-    mut platform_query: Query<(&mut Platform, &mut TextureAtlasSprite), With<Platform>>,
+    mut commands: Commands,
+    mut platform_query: Query<(Entity, &Platform, &mut TextureAtlasSprite), With<Platform>>,
     time: Res<Time>,
 ) {
-    for (mut platform, mut platform_ta) in &mut platform_query {
+    for (entity, platform, mut platform_ta) in &mut platform_query {
         if platform.state == PlatformState::Pulverizing {
-            let index = (time.elapsed_seconds() * PLATFORM_ANIMATION_SPEED) as usize;
+            let index = ((time.elapsed_seconds() * PLATFORM_ANIMATION_SPEED) as usize) % 5;
             if index >= 4 {
-                platform.state = PlatformState::Pulverized;
+                commands.entity(entity).despawn();
             } else {
                 platform_ta.index = index;
             }

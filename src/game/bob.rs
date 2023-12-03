@@ -2,10 +2,10 @@ use super::GameEntity;
 use bevy::prelude::*;
 
 const BOB_ANIMATION_SPEED: f32 = 10.0;
-const BOB_JUMP_VELOCITY: f32 = 400.0; // 11
+pub const BOB_JUMP_VELOCITY: f32 = 400.0; // 11
 const BOB_MOVE_VELOCITY: f32 = 500.0; // 20
 const ACCELERATION_X: f32 = 0.5;
-const GRAVITY_Y: f32 = -480.0; // -12
+pub const GRAVITY_Y: f32 = -480.0; // -12
 
 #[derive(Component, Default)]
 pub struct Bob {

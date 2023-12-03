@@ -2,6 +2,8 @@ use super::GameEntity;
 use bevy::prelude::*;
 
 const PLATFORM_ANIMATION_SPEED: f32 = 10.0;
+pub const PLATFORM_HEIGHT: f32 = 16.0;
+pub const PLATFORM_WIDTH: f32 = 64.0;
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash)]
 pub enum PlatformType {
@@ -15,7 +17,7 @@ enum PlatformState {
     #[default]
     Normal,
     Pulverizing,
-    Pulverized
+    Pulverized,
 }
 
 #[derive(Component, Default)]
@@ -66,8 +68,7 @@ pub(super) fn animate_platforms(
             let index = (time.elapsed_seconds() * PLATFORM_ANIMATION_SPEED) as usize;
             if index >= 4 {
                 platform.state = PlatformState::Pulverized;
-            }
-            else {
+            } else {
                 platform_ta.index = index;
             }
         }

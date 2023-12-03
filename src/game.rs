@@ -1,8 +1,10 @@
 use crate::{cleanup, AudioHandles, GameState, SoundDisabled};
 use bevy::prelude::*;
+use rand::Rng;
 
 mod bob;
 mod coin;
+mod level;
 mod platform;
 
 #[derive(Component)]
@@ -45,11 +47,39 @@ impl Plugin for GamePlugin {
     }
 }
 
+const WORLD_WIDTH: f32 = 10.0 * 32.0;
+const WORLD_HEIGHT: f32 = 2.0 * 32.0 * 20.0;
+
 fn setup_play(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
+    let mut y: f32 = platform::PLATFORM_HEIGHT / 2.0;
+    let max_jump_height: f32 =
+        bob::BOB_JUMP_VELOCITY * bob::BOB_JUMP_VELOCITY / (2.0 * -bob::GRAVITY_Y);
+    let mut rng = rand::thread_rng();
+    while y < WORLD_HEIGHT - WORLD_WIDTH / 2.0 {
+        let moving_platform = rng.gen_range(0.0..1.0) > 0.8;
+        let x = rng.gen_range(0.0..1.0) * (WORLD_WIDTH - platform::PLATFORM_WIDTH)
+            + platform::PLATFORM_WIDTH / 2.0;
+
+        platform::spawn_platform(
+            &mut commands,
+            &asset_server,
+            &mut texture_atlases,
+            if moving_platform {
+                platform::PlatformType::Moving
+            } else {
+                platform::PlatformType::Static
+            },
+            Vec2::new(x - 160.0, y - 240.0),
+        );
+
+        y += max_jump_height - 0.5 * 32.0;
+        y -= rng.gen_range(0.0..1.0) * (max_jump_height / 3.0);
+    }
+
     bob::setup_bob(&mut commands, &asset_server, &mut texture_atlases);
 
     coin::spawn_coin(
@@ -57,14 +87,6 @@ fn setup_play(
         &asset_server,
         &mut texture_atlases,
         Vec2::new(0.0, 120.0),
-    );
-
-    platform::spawn_platform(
-        &mut commands,
-        &asset_server,
-        &mut texture_atlases,
-        platform::PlatformType::Moving,
-        Vec2::new(30.0, -60.0),
     );
 
     // Spawn the score UI

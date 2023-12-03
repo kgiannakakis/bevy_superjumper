@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use bevy::{audio::Volume, prelude::*, window::WindowResolution};
+use bevy::{audio::Volume, prelude::*, render::camera::ScalingMode, window::WindowResolution};
 
 mod game;
 mod help;
@@ -40,7 +40,7 @@ fn main() {
                     primary_window: Some(Window {
                         title: String::from("Super Jumper"),
                         resolution: WindowResolution::new(320.0, 480.0),
-                        resizable: false,
+                        resizable: true,
                         ..default()
                     }),
                     ..default()
@@ -63,7 +63,8 @@ fn main() {
 
 fn scene_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Spawn a 2D camera
-    commands.spawn(Camera2dBundle::default());
+    let mut game_2d_camera_bundle = Camera2dBundle::default();
+    commands.spawn(game_2d_camera_bundle);
 
     // Spawn the background sprite
     commands.spawn(SpriteBundle {

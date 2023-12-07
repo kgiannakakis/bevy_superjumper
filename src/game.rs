@@ -1,4 +1,4 @@
-use crate::{cleanup, AudioHandles, GameState, SoundDisabled};
+use crate::{cleanup, click_sound, AudioHandles, GameState, SoundDisabled};
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 
 use bob::Bob;
@@ -25,13 +25,31 @@ enum PlayState {
     // GameOver,
 }
 
+#[derive(Component)]
+enum PlayButtonAction {
+    Play,
+    Resume,
+    Quit,
+    Pause,
+}
+
+const TRANSPARENT: Color = Color::Rgba {
+    red: 0.0,
+    green: 0.0,
+    blue: 0.0,
+    alpha: 0.0,
+};
+
 pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_state::<PlayState>()
             .init_resource::<Points>()
             .add_systems(OnEnter(GameState::Playing), setup_play)
-            .add_systems(OnExit(GameState::Playing), cleanup::<GameEntity>)
+            .add_systems(
+                OnExit(GameState::Playing),
+                (click_sound, cleanup::<GameEntity>),
+            )
             .add_systems(
                 Update,
                 (
@@ -44,6 +62,7 @@ impl Plugin for GamePlugin {
                     coin::animate_coins,
                     platform::animate_platforms,
                     check_platform_collisions,
+                    ui_action,
                 )
                     .run_if(in_state(GameState::Playing)),
             );
@@ -95,22 +114,66 @@ fn setup_play(
                 style: Style {
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
+                    align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
+                    flex_direction: FlexDirection::Column,
                     ..Default::default()
                 },
                 ..Default::default()
             },
         ))
-        .with_children(|node| {
-            node.spawn((TextBundle::from_section(
-                "Super Jumper",
-                TextStyle {
-                    font: asset_server.load("fonts/Retroville NC.ttf"),
-                    font_size: 20.0,
-                    color: Color::WHITE,
-                },
-            )
-            .with_text_alignment(TextAlignment::Center),));
+        .with_children(|parent| {
+            for (action, text, visibility) in [
+                (PlayButtonAction::Play, "READY?", Visibility::Visible),
+                (PlayButtonAction::Resume, "RESUME", Visibility::Hidden),
+                (PlayButtonAction::Quit, "QUIT", Visibility::Hidden),
+            ] {
+                parent
+                    .spawn((
+                        ButtonBundle {
+                            background_color: TRANSPARENT.into(),
+                            visibility: visibility,
+                            ..default()
+                        },
+                        action,
+                    ))
+                    .with_children(|parent| {
+                        parent.spawn(
+                            TextBundle::from_section(
+                                text,
+                                TextStyle {
+                                    font: asset_server.load("fonts/Retroville NC.ttf"),
+                                    font_size: 40.0,
+                                    color: Color::WHITE,
+                                },
+                            )
+                            .with_text_alignment(TextAlignment::Center),
+                        );
+                    });
+            }
+
+            parent
+                .spawn((
+                    ButtonBundle {
+                        style: Style {
+                            position_type: PositionType::Absolute,
+                            top: Val::Px(10.0),
+                            right: Val::Px(10.0),
+                            ..default()
+                        },
+                        background_color: TRANSPARENT.into(),
+                        ..default()
+                    },
+                    PlayButtonAction::Pause,
+                ))
+                .with_children(|parent| {
+                    let path = "sprites/pause.png";
+                    let icon = asset_server.load(path);
+                    parent.spawn(ImageBundle {
+                        image: UiImage::new(icon),
+                        ..default()
+                    });
+                });
         });
 }
 
@@ -150,5 +213,24 @@ fn coin_sound(
             source: audio_handles.coin.clone(),
             ..default()
         });
+    }
+}
+
+fn ui_action(
+    interaction_query: Query<
+        (&Interaction, &PlayButtonAction),
+        (Changed<Interaction>, With<Button>),
+    >,
+    mut game_state: ResMut<NextState<GameState>>,
+) {
+    for (interaction, menu_button_action) in &interaction_query {
+        if *interaction == Interaction::Pressed {
+            match menu_button_action {
+                PlayButtonAction::Play => {}
+                PlayButtonAction::Resume => {}
+                PlayButtonAction::Quit => game_state.set(GameState::Menu),
+                PlayButtonAction::Pause => game_state.set(GameState::Menu),
+            }
+        }
     }
 }

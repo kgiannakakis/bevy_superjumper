@@ -1,11 +1,26 @@
 use crate::{cleanup, click_sound, GameMusic, GameState, SoundDisabled};
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::prelude::*;
 
 #[derive(Component)]
 struct MenuEntity;
 
 #[derive(Component)]
 struct SoundButton;
+
+#[derive(Component)]
+enum MenuButtonAction {
+    Play,
+    HighScores,
+    Help,
+    SoundToggle,
+}
+
+const TRANSPARENT: Color = Color::Rgba {
+    red: 0.0,
+    green: 0.0,
+    blue: 0.0,
+    alpha: 0.0,
+};
 
 pub struct MenuPlugin;
 impl Plugin for MenuPlugin {
@@ -18,13 +33,13 @@ impl Plugin for MenuPlugin {
             .add_systems(
                 Update,
                 (
-                    start_playing.run_if(in_state(GameState::Menu).and_then(has_clicked_play)),
-                    show_help.run_if(in_state(GameState::Menu).and_then(has_clicked_help)),
-                    show_highscores
-                        .run_if(in_state(GameState::Menu).and_then(has_clicked_highscores)),
-                    toggle_pause_music
-                        .run_if(in_state(GameState::Menu).and_then(has_clicked_sound)),
-                ),
+                    menu_action,
+                    click_sound.run_if(
+                        resource_changed::<SoundDisabled>()
+                            .and_then(not(resource_added::<SoundDisabled>())),
+                    ),
+                )
+                    .run_if(in_state(GameState::Menu)),
             );
     }
 }
@@ -34,149 +49,126 @@ fn setup_menu(
     asset_server: Res<AssetServer>,
     sound_disabled: ResMut<SoundDisabled>,
 ) {
-    commands.spawn((
-        SpriteBundle {
-            texture: asset_server.load("sprites/logo.png"),
-            transform: Transform::from_xyz(0.0, 240.0 - 10.0 - 142.0 / 2.0, 100.0),
-            ..Default::default()
-        },
-        MenuEntity,
-    ));
+    commands
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    flex_direction: FlexDirection::Column,
+                    ..default()
+                },
+                ..default()
+            },
+            MenuEntity,
+        ))
+        .with_children(|parent| {
+            let logo = asset_server.load("sprites/logo.png");
+            parent.spawn(ImageBundle {
+                style: Style {
+                    height: Val::Percent(30.0),
+                    position_type: PositionType::Absolute,
+                    top: Val::Px(10.0),
+                    ..default()
+                },
+                image: UiImage::new(logo),
+                ..default()
+            });
 
-    commands.spawn((
-        SpriteBundle {
-            texture: asset_server.load("sprites/mainMenu.png"),
-            transform: Transform::from_xyz(0.0, -40.0, 100.0),
-            ..Default::default()
-        },
-        MenuEntity,
-    ));
+            for (action, text) in [
+                (MenuButtonAction::Play, "PLAY"),
+                (MenuButtonAction::HighScores, "HIGHSCORES"),
+                (MenuButtonAction::Help, "HELP"),
+            ] {
+                parent
+                    .spawn((
+                        ButtonBundle {
+                            background_color: TRANSPARENT.into(),
+                            ..default()
+                        },
+                        action,
+                    ))
+                    .with_children(|parent| {
+                        parent.spawn(
+                            TextBundle::from_section(
+                                text,
+                                TextStyle {
+                                    font: asset_server.load("fonts/Retroville NC.ttf"),
+                                    font_size: 40.0,
+                                    color: Color::WHITE,
+                                },
+                            )
+                            .with_text_alignment(TextAlignment::Center),
+                        );
+                    });
+            }
 
-    spawn_sound_button(commands, asset_server, sound_disabled);
+            parent
+                .spawn((
+                    ButtonBundle {
+                        style: Style {
+                            position_type: PositionType::Absolute,
+                            left: Val::Px(10.0),
+                            bottom: Val::Px(10.0),
+                            ..default()
+                        },
+                        background_color: TRANSPARENT.into(),
+                        ..default()
+                    },
+                    MenuButtonAction::SoundToggle,
+                ))
+                .with_children(|parent| {
+                    let path = if sound_disabled.0 {
+                        "sprites/soundOff.png"
+                    } else {
+                        "sprites/soundOn.png"
+                    };
+                    let icon = asset_server.load(path);
+                    parent.spawn((
+                        ImageBundle {
+                            image: UiImage::new(icon),
+                            ..default()
+                        },
+                        SoundButton,
+                    ));
+                });
+        });
 }
 
-fn start_playing(mut state: ResMut<NextState<GameState>>) {
-    println!("Play");
-    state.set(GameState::Playing);
-}
-
-fn show_help(mut state: ResMut<NextState<GameState>>) {
-    println!("Help");
-    state.set(GameState::Help);
-}
-
-fn show_highscores(mut state: ResMut<NextState<GameState>>) {
-    println!("High Scores");
-    state.set(GameState::HighScores);
-}
-
-pub fn has_clicked_play(
-    keyboard_input: Res<Input<KeyCode>>,
-    mouse_button_input: Res<Input<MouseButton>>,
-    q_windows: Query<&Window, With<PrimaryWindow>>,
-) -> bool {
-    if mouse_button_input.just_pressed(MouseButton::Left) {
-        if let Some(position) = q_windows.single().cursor_position() {
-            return play_button_pressed(position);
-        }
-    }
-
-    keyboard_input.just_pressed(KeyCode::P)
-}
-
-pub fn has_clicked_highscores(
-    keyboard_input: Res<Input<KeyCode>>,
-    mouse_button_input: Res<Input<MouseButton>>,
-    q_windows: Query<&Window, With<PrimaryWindow>>,
-) -> bool {
-    if mouse_button_input.just_pressed(MouseButton::Left) {
-        if let Some(position) = q_windows.single().cursor_position() {
-            return highscores_button_pressed(position);
-        }
-    }
-
-    keyboard_input.just_pressed(KeyCode::S)
-}
-
-pub fn has_clicked_help(
-    keyboard_input: Res<Input<KeyCode>>,
-    mouse_button_input: Res<Input<MouseButton>>,
-    q_windows: Query<&Window, With<PrimaryWindow>>,
-) -> bool {
-    if mouse_button_input.just_pressed(MouseButton::Left) {
-        if let Some(position) = q_windows.single().cursor_position() {
-            return help_button_pressed(position);
-        }
-    }
-
-    keyboard_input.just_pressed(KeyCode::H)
-}
-
-pub fn has_clicked_sound(
-    keyboard_input: Res<Input<KeyCode>>,
-    mouse_button_input: Res<Input<MouseButton>>,
-    q_windows: Query<&Window, With<PrimaryWindow>>,
-) -> bool {
-    if mouse_button_input.just_pressed(MouseButton::Left) {
-        if let Some(position) = q_windows.single().cursor_position() {
-            return sound_button_pressed(position);
-        }
-    }
-
-    keyboard_input.just_pressed(KeyCode::A)
-}
-
-fn play_button_pressed(position: Vec2) -> bool {
-    position.y > 240.0 + 40.0 - 55.0 && position.y < 240.0 + 40.0 - 55.0 + 35.0
-}
-
-fn highscores_button_pressed(position: Vec2) -> bool {
-    position.y > 240.0 + 40.0 - 55.0 + 35.0 && position.y < 240.0 + 40.0 - 55.0 + 70.0
-}
-
-fn help_button_pressed(position: Vec2) -> bool {
-    position.y > 240.0 + 40.0 - 55.0 + 70.0 && position.y < 240.0 + 40.0 - 55.0 + 110.0
-}
-
-fn sound_button_pressed(position: Vec2) -> bool {
-    position.x > 10.0
-        && position.x < 10.0 + 64.0
-        && position.y > 480.0 - 10.0 - 64.0
-        && position.y < 480.0 - 10.0
-}
-
-fn toggle_pause_music(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut sound_disabled: ResMut<SoundDisabled>,
-    sound_button_query: Query<Entity, With<SoundButton>>,
+fn menu_action(
+    interaction_query: Query<
+        (&Interaction, &MenuButtonAction),
+        (Changed<Interaction>, With<Button>),
+    >,
+    mut game_state: ResMut<NextState<GameState>>,
     music_query: Query<&AudioSink, With<GameMusic>>,
-) {
-    if let Ok(sink) = music_query.get_single() {
-        sink.toggle();
-    }
-
-    commands.entity(sound_button_query.single()).despawn();
-
-    sound_disabled.0 = !sound_disabled.0;
-    spawn_sound_button(commands, asset_server, sound_disabled);
-}
-
-fn spawn_sound_button(
-    mut commands: Commands,
+    mut sound_disabled: ResMut<SoundDisabled>,
+    mut sound_button_query: Query<(Entity, &mut UiImage), With<SoundButton>>,
     asset_server: Res<AssetServer>,
-    sound_disabled: ResMut<SoundDisabled>,
 ) {
-    let path = match sound_disabled.0 {
-        true => "sprites/soundOff.png",
-        false => "sprites/soundOn.png",
-    };
-    commands.spawn((
-        SpriteBundle {
-            texture: asset_server.load(path),
-            transform: Transform::from_xyz(-160.0 + 10.0 + 32.0, -240.0 + 10.0 + 32.0, 100.0),
-            ..Default::default()
-        },
-        (MenuEntity, SoundButton),
-    ));
+    for (interaction, menu_button_action) in &interaction_query {
+        if *interaction == Interaction::Pressed {
+            match menu_button_action {
+                MenuButtonAction::Play => game_state.set(GameState::Playing),
+                MenuButtonAction::HighScores => game_state.set(GameState::HighScores),
+                MenuButtonAction::Help => game_state.set(GameState::Help),
+                MenuButtonAction::SoundToggle => {
+                    if let Ok(sink) = music_query.get_single() {
+                        sink.toggle();
+                    }
+                    sound_disabled.0 = !sound_disabled.0;
+
+                    let (_, mut ui_image) = sound_button_query.single_mut();
+                    let path = if sound_disabled.0 {
+                        "sprites/soundOff.png"
+                    } else {
+                        "sprites/soundOn.png"
+                    };
+                    *ui_image = UiImage::new(asset_server.load(path));
+                }
+            }
+        }
+    }
 }

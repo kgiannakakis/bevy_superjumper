@@ -1,8 +1,15 @@
 use crate::{cleanup, click_sound, GameState};
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::prelude::*;
 
 #[derive(Component)]
 struct HighScoresEntity;
+
+const TRANSPARENT: Color = Color::Rgba {
+    red: 0.0,
+    green: 0.0,
+    blue: 0.0,
+    alpha: 0.0,
+};
 
 pub struct HighScoresPlugin;
 impl Plugin for HighScoresPlugin {
@@ -12,23 +19,11 @@ impl Plugin for HighScoresPlugin {
                 OnExit(GameState::HighScores),
                 (click_sound, cleanup::<HighScoresEntity>),
             )
-            .add_systems(
-                Update,
-                (go_back.run_if(in_state(GameState::HighScores).and_then(has_clicked_back)),),
-            );
+            .add_systems(Update, ui_action.run_if(in_state(GameState::HighScores)));
     }
 }
 
 fn setup_highscores(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn((
-        SpriteBundle {
-            texture: asset_server.load("sprites/back.png"),
-            transform: Transform::from_xyz(-160.0 + 10.0 + 32.0, -240.0 + 10.0 + 32.0, 100.0),
-            ..Default::default()
-        },
-        HighScoresEntity,
-    ));
-
     commands
         .spawn((
             NodeBundle {
@@ -81,30 +76,35 @@ fn setup_highscores(mut commands: Commands, asset_server: Res<AssetServer>) {
                         );
                     }
                 });
+
+            parent
+                .spawn(ButtonBundle {
+                    style: Style {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(10.0),
+                        bottom: Val::Px(10.0),
+                        ..default()
+                    },
+                    background_color: TRANSPARENT.into(),
+                    ..default()
+                })
+                .with_children(|parent| {
+                    let icon = asset_server.load("sprites/back.png");
+                    parent.spawn(ImageBundle {
+                        image: UiImage::new(icon),
+                        ..default()
+                    });
+                });
         });
 }
 
-pub fn has_clicked_back(
-    keyboard_input: Res<Input<KeyCode>>,
-    mouse_button_input: Res<Input<MouseButton>>,
-    q_windows: Query<&Window, With<PrimaryWindow>>,
-) -> bool {
-    if mouse_button_input.just_pressed(MouseButton::Left) {
-        if let Some(position) = q_windows.single().cursor_position() {
-            return back_button_pressed(position);
+fn ui_action(
+    interaction_query: Query<&Interaction, (Changed<Interaction>, With<Button>)>,
+    mut game_state: ResMut<NextState<GameState>>,
+) {
+    for interaction in &interaction_query {
+        if *interaction == Interaction::Pressed {
+            game_state.set(GameState::Menu);
         }
     }
-
-    keyboard_input.just_pressed(KeyCode::Back)
-}
-
-fn back_button_pressed(position: Vec2) -> bool {
-    position.x > 10.0
-        && position.x < 10.0 + 64.0
-        && position.y > 480.0 - 10.0 - 64.0
-        && position.y < 480.0 - 10.0
-}
-
-fn go_back(mut state: ResMut<NextState<GameState>>) {
-    state.set(GameState::Menu);
 }

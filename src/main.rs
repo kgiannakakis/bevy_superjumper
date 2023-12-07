@@ -20,6 +20,9 @@ enum GameState {
 #[derive(Component)]
 struct GameMusic;
 
+#[derive(Component)]
+struct Background;
+
 #[derive(Resource)]
 struct AudioHandles {
     click: Handle<AudioSource>,
@@ -69,10 +72,13 @@ fn scene_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(game_2d_camera_bundle);
 
     // Spawn the background sprite
-    commands.spawn(SpriteBundle {
-        texture: asset_server.load("sprites/background.png"),
-        ..Default::default()
-    });
+    commands.spawn((
+        SpriteBundle {
+            texture: asset_server.load("sprites/background.png"),
+            ..Default::default()
+        },
+        Background,
+    ));
 
     // Load audio files
     commands.insert_resource(AudioHandles {

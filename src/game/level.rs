@@ -3,7 +3,7 @@ use rand::Rng;
 use super::{bob, coin, platform};
 
 const WORLD_WIDTH: f32 = 10.0 * 32.0;
-const WORLD_HEIGHT: f32 = 2.0 * 32.0 * 20.0;
+const WORLD_HEIGHT: f32 = 15.0 * 32.0 * 20.0;
 
 pub enum GameObjectType {
     Platform(bool),

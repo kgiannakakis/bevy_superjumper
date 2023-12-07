@@ -1,4 +1,5 @@
 use super::GameEntity;
+use crate::Background;
 use bevy::prelude::*;
 
 const BOB_ANIMATION_SPEED: f32 = 10.0;
@@ -56,22 +57,32 @@ pub(super) fn animate_bob(
     }
 }
 
-pub(super) fn update_bob(mut bob: Query<(&mut Transform, &mut Bob), With<Bob>>, time: Res<Time>) {
-    for (mut transform, mut bob) in &mut bob {
-        bob.velocity.y += GRAVITY_Y * time.delta_seconds();
-        transform.translation.x += bob.velocity.x * time.delta_seconds();
-        transform.translation.y += bob.velocity.y * time.delta_seconds();
+pub(super) fn update_bob(
+    mut bob_query: Query<(&mut Transform, &mut Bob), With<Bob>>,
+    mut camera_query: Query<&mut Transform, (With<Camera>, Without<Bob>, Without<Background>)>,
+    mut bg_query: Query<&mut Transform, (With<Background>, Without<Bob>, Without<Camera>)>,
+    time: Res<Time>,
+) {
+    let (mut transform, mut bob) = bob_query.single_mut();
+    bob.velocity.y += GRAVITY_Y * time.delta_seconds();
+    transform.translation.x += bob.velocity.x * time.delta_seconds();
+    transform.translation.y += bob.velocity.y * time.delta_seconds();
 
-        if transform.translation.y < -240.0 + 16.0 {
-            bob.velocity.y = BOB_JUMP_VELOCITY;
-        }
+    if transform.translation.y < -240.0 + 16.0 {
+        bob.velocity.y = BOB_JUMP_VELOCITY;
+    }
 
-        if transform.translation.x < -160.0 {
-            transform.translation.x += 320.0;
-        }
-        if transform.translation.x > 160.0 {
-            transform.translation.x -= 320.0;
-        }
+    if transform.translation.x < -160.0 {
+        transform.translation.x += 320.0;
+    }
+    if transform.translation.x > 160.0 {
+        transform.translation.x -= 320.0;
+    }
+
+    let mut camera = camera_query.single_mut();
+    if transform.translation.y > camera.translation.y {
+        camera.translation.y = transform.translation.y;
+        bg_query.single_mut().translation.y = transform.translation.y;
     }
 }
 

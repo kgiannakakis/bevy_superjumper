@@ -1,4 +1,4 @@
-use crate::{cleanup, click_sound, AudioHandles, GameState, SoundDisabled};
+use crate::{cleanup, click_sound, AudioHandles, Background, GameState, SoundDisabled};
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 
 use bob::Bob;
@@ -12,6 +12,9 @@ mod platform;
 #[derive(Component)]
 struct GameEntity;
 
+#[derive(Component)]
+struct GameUi;
+
 #[derive(Resource, Default)]
 pub struct Points(usize);
 
@@ -19,8 +22,8 @@ pub struct Points(usize);
 enum PlayState {
     #[default]
     Ready,
-    // Running,
-    // Paused,
+    Running,
+    Paused,
     // LevelEnd,
     // GameOver,
 }
@@ -48,7 +51,16 @@ impl Plugin for GamePlugin {
             .add_systems(OnEnter(GameState::Playing), setup_play)
             .add_systems(
                 OnExit(GameState::Playing),
-                (click_sound, cleanup::<GameEntity>),
+                (click_sound, cleanup::<GameEntity>, reset_camera),
+            )
+            .add_systems(
+                Update,
+                (
+                    ui_action,
+                    update_buttons_visibility.run_if(state_changed::<PlayState>()),
+                    click_sound.run_if(state_changed::<PlayState>()),
+                )
+                    .run_if(in_state(GameState::Playing)),
             )
             .add_systems(
                 Update,
@@ -62,9 +74,8 @@ impl Plugin for GamePlugin {
                     coin::animate_coins,
                     platform::animate_platforms,
                     check_platform_collisions,
-                    ui_action,
                 )
-                    .run_if(in_state(GameState::Playing)),
+                    .run_if(in_state(GameState::Playing).and_then(in_state(PlayState::Running))),
             );
     }
 }
@@ -135,6 +146,7 @@ fn setup_play(
                             visibility: visibility,
                             ..default()
                         },
+                        GameUi,
                         action,
                     ))
                     .with_children(|parent| {
@@ -162,8 +174,10 @@ fn setup_play(
                             ..default()
                         },
                         background_color: TRANSPARENT.into(),
+                        visibility: Visibility::Hidden,
                         ..default()
                     },
+                    GameUi,
                     PlayButtonAction::Pause,
                 ))
                 .with_children(|parent| {
@@ -222,15 +236,71 @@ fn ui_action(
         (Changed<Interaction>, With<Button>),
     >,
     mut game_state: ResMut<NextState<GameState>>,
+    mut play_state: ResMut<NextState<PlayState>>,
 ) {
     for (interaction, menu_button_action) in &interaction_query {
         if *interaction == Interaction::Pressed {
             match menu_button_action {
-                PlayButtonAction::Play => {}
-                PlayButtonAction::Resume => {}
+                PlayButtonAction::Play => play_state.set(PlayState::Running),
+                PlayButtonAction::Resume => play_state.set(PlayState::Running),
                 PlayButtonAction::Quit => game_state.set(GameState::Menu),
-                PlayButtonAction::Pause => game_state.set(GameState::Menu),
+                PlayButtonAction::Pause => play_state.set(PlayState::Paused),
             }
         }
     }
+}
+
+fn update_buttons_visibility(
+    play_state: Res<State<PlayState>>,
+    mut visibility_query: Query<(Entity, &mut Visibility), With<GameUi>>,
+) {
+    let actions = [
+        PlayButtonAction::Play,
+        PlayButtonAction::Resume,
+        PlayButtonAction::Quit,
+        PlayButtonAction::Pause,
+    ];
+    let mut action_index = 0;
+    for (_, mut visibility) in &mut visibility_query {
+        match actions[action_index] {
+            PlayButtonAction::Play => {
+                *visibility = if *play_state == PlayState::Ready {
+                    Visibility::Visible
+                } else {
+                    Visibility::Hidden
+                }
+            }
+            PlayButtonAction::Resume => {
+                *visibility = if *play_state == PlayState::Paused {
+                    Visibility::Visible
+                } else {
+                    Visibility::Hidden
+                }
+            }
+            PlayButtonAction::Quit => {
+                *visibility = if *play_state == PlayState::Paused {
+                    Visibility::Visible
+                } else {
+                    Visibility::Hidden
+                }
+            }
+            PlayButtonAction::Pause => {
+                *visibility = if *play_state == PlayState::Running {
+                    Visibility::Visible
+                } else {
+                    Visibility::Hidden
+                }
+            }
+        }
+
+        action_index += 1;
+    }
+}
+
+fn reset_camera(
+    mut camera_query: Query<&mut Transform, (With<Camera>, Without<Background>)>,
+    mut bg_query: Query<&mut Transform, (With<Background>, Without<Camera>)>,
+) {
+    camera_query.single_mut().translation.y = 0.0;
+    bg_query.single_mut().translation.y = 0.0;
 }

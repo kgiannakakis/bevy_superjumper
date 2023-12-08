@@ -2,6 +2,7 @@ use crate::{cleanup, click_sound, AudioHandles, Background, GameState, SoundDisa
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 
 use bob::Bob;
+use coin::Coin;
 use platform::Platform;
 
 mod bob;
@@ -13,10 +14,13 @@ mod platform;
 struct GameEntity;
 
 #[derive(Component)]
-struct GameUi;
+struct GameButtonUi;
+
+#[derive(Component)]
+struct ScoreUi;
 
 #[derive(Resource, Default)]
-pub struct Points(usize);
+pub struct Points(u32);
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 enum PlayState {
@@ -68,12 +72,14 @@ impl Plugin for GamePlugin {
                     coin_sound.run_if(
                         resource_changed::<Points>().and_then(not(resource_added::<Points>())),
                     ),
+                    update_score_text.run_if(resource_changed::<Points>()),
                     bob::animate_bob,
                     bob::update_bob,
                     bob::move_bob,
                     coin::animate_coins,
                     platform::animate_platforms,
                     check_platform_collisions,
+                    check_coin_collisions,
                 )
                     .run_if(in_state(GameState::Playing).and_then(in_state(PlayState::Running))),
             );
@@ -146,7 +152,7 @@ fn setup_play(
                             visibility: visibility,
                             ..default()
                         },
-                        GameUi,
+                        GameButtonUi,
                         action,
                     ))
                     .with_children(|parent| {
@@ -177,7 +183,7 @@ fn setup_play(
                         visibility: Visibility::Hidden,
                         ..default()
                     },
-                    GameUi,
+                    GameButtonUi,
                     PlayButtonAction::Pause,
                 ))
                 .with_children(|parent| {
@@ -187,6 +193,34 @@ fn setup_play(
                         image: UiImage::new(icon),
                         ..default()
                     });
+                });
+
+            parent
+                .spawn(NodeBundle {
+                    style: Style {
+                        flex_direction: FlexDirection::Column,
+                        align_items: AlignItems::FlexStart,
+                        position_type: PositionType::Absolute,
+                        top: Val::Px(10.0),
+                        left: Val::Px(10.0),
+                        ..default()
+                    },
+                    visibility: Visibility::Hidden,
+                    ..default()
+                })
+                .with_children(|parent| {
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "SCORE: 0",
+                            TextStyle {
+                                font: asset_server.load("fonts/Retroville NC.ttf"),
+                                font_size: 30.0,
+                                color: Color::WHITE,
+                            },
+                        )
+                        .with_text_alignment(TextAlignment::Left),
+                        ScoreUi,
+                    ));
                 });
         });
 }
@@ -213,6 +247,28 @@ fn check_platform_collisions(
                 platform.state = platform::PlatformState::Pulverizing;
                 return;
             }
+        }
+    }
+}
+
+fn check_coin_collisions(
+    bob_query: Query<&Transform, With<Bob>>,
+    mut coins_query: Query<(Entity, &Transform), With<Coin>>,
+    mut points: ResMut<Points>,
+    mut commands: Commands,
+) {
+    let bob_transform = bob_query.single();
+    for (entity, &coin_transform) in &mut coins_query {
+        if collide(
+            bob_transform.translation,
+            bob::BOB_SIZE,
+            coin_transform.translation,
+            coin::COIN_SIZE,
+        )
+        .is_some()
+        {
+            points.0 += coin::COIN_SCORE;
+            commands.entity(entity).despawn_recursive();
         }
     }
 }
@@ -252,7 +308,11 @@ fn ui_action(
 
 fn update_buttons_visibility(
     play_state: Res<State<PlayState>>,
-    mut visibility_query: Query<(Entity, &mut Visibility), With<GameUi>>,
+    mut visibility_query: Query<(Entity, &mut Visibility), With<GameButtonUi>>,
+    mut score_visibility_query: Query<
+        (Entity, &mut Visibility),
+        (With<ScoreUi>, Without<GameButtonUi>),
+    >,
 ) {
     let actions = [
         PlayButtonAction::Play,
@@ -294,6 +354,18 @@ fn update_buttons_visibility(
         }
 
         action_index += 1;
+    }
+
+    *score_visibility_query.single_mut().1 = if *play_state != PlayState::Ready {
+        Visibility::Visible
+    } else {
+        Visibility::Hidden
+    };
+}
+
+fn update_score_text(mut query: Query<&mut Text, With<ScoreUi>>, points: Res<Points>) {
+    for mut text in &mut query {
+        text.sections[0].value = format!("SCORE: {}", points.0);
     }
 }
 

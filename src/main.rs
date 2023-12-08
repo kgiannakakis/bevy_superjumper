@@ -42,7 +42,7 @@ fn main() {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: String::from("Super Jumper"),
-                        resolution: WindowResolution::new(480.0, 720.0),
+                        resolution: WindowResolution::new(400.0, 600.0),
                         resizable: true,
                         ..default()
                     }),

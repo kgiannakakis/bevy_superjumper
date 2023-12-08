@@ -1,17 +1,11 @@
-use super::GameEntity;
+use super::{GameEntity, MovingObject};
 use bevy::prelude::*;
 
 const PLATFORM_ANIMATION_SPEED: f32 = 10.0;
 pub const PLATFORM_HEIGHT: f32 = 16.0;
 pub const PLATFORM_WIDTH: f32 = 64.0;
 pub const PLATFORM_SIZE: Vec2 = Vec2::new(PLATFORM_WIDTH, PLATFORM_HEIGHT);
-
-#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash)]
-pub enum PlatformType {
-    #[default]
-    Static,
-    Moving,
-}
+const PLATFORM_VELOCITY_X: f32 = 60.0;
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash)]
 pub enum PlatformState {
@@ -22,7 +16,6 @@ pub enum PlatformState {
 
 #[derive(Component, Default)]
 pub struct Platform {
-    platform_type: PlatformType,
     pub state: PlatformState,
 }
 
@@ -30,7 +23,7 @@ pub(super) fn spawn_platform(
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
     texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
-    platform_type: PlatformType,
+    moving: bool,
     position: Vec2,
 ) {
     // Load the platform's sprite sheet and create a texture atlas from it
@@ -45,18 +38,26 @@ pub(super) fn spawn_platform(
     ));
 
     // Spawn platform
-    commands.spawn((
-        Platform {
-            platform_type,
-            ..default()
-        },
-        GameEntity,
-        SpriteSheetBundle {
-            texture_atlas,
-            transform: Transform::from_xyz(position.x, position.y, 20.0),
-            ..Default::default()
-        },
-    ));
+    let sprite_bundle = SpriteSheetBundle {
+        texture_atlas,
+        transform: Transform::from_xyz(position.x, position.y, 20.0),
+        ..Default::default()
+    };
+
+    if moving {
+        commands.spawn((
+            Platform { ..default() },
+            GameEntity,
+            MovingObject {
+                width: PLATFORM_WIDTH,
+                velocity_x: PLATFORM_VELOCITY_X,
+                dir: 1.0,
+            },
+            sprite_bundle,
+        ));
+    } else {
+        commands.spawn((Platform { ..default() }, GameEntity, sprite_bundle));
+    }
 }
 
 pub(super) fn animate_platforms(

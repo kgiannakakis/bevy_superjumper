@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use crate::{cleanup, click_sound, AudioHandles, Background, GameState, SoundDisabled};
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 
@@ -12,6 +14,13 @@ mod platform;
 
 #[derive(Component)]
 struct GameEntity;
+
+#[derive(Component)]
+struct MovingObject {
+    width: f32,
+    velocity_x: f32,
+    dir: f32,
+}
 
 #[derive(Component)]
 struct GameButtonUi;
@@ -78,6 +87,7 @@ impl Plugin for GamePlugin {
                     bob::move_bob,
                     coin::animate_coins,
                     platform::animate_platforms,
+                    move_objects,
                     check_platform_collisions,
                     check_coin_collisions,
                 )
@@ -100,11 +110,7 @@ fn setup_play(
                     &mut commands,
                     &asset_server,
                     &mut texture_atlases,
-                    if moving {
-                        platform::PlatformType::Moving
-                    } else {
-                        platform::PlatformType::Static
-                    },
+                    moving,
                     Vec2::new(object.x - 160.0, object.y - 240.0),
                 );
             }
@@ -149,7 +155,7 @@ fn setup_play(
                     .spawn((
                         ButtonBundle {
                             background_color: TRANSPARENT.into(),
-                            visibility: visibility,
+                            visibility,
                             ..default()
                         },
                         GameButtonUi,
@@ -273,6 +279,21 @@ fn check_coin_collisions(
     }
 }
 
+fn move_objects(
+    mut objects_query: Query<(&mut MovingObject, &mut Transform), With<MovingObject>>,
+    time: Res<Time>,
+) {
+    for (mut obj, mut transform) in &mut objects_query {
+        transform.translation.x += obj.velocity_x * obj.dir * time.delta_seconds();
+
+        if transform.translation.x + obj.width / 2.0 > 160.0 {
+            obj.dir = -1.0;
+        } else if transform.translation.x - obj.width / 2.0 < -160.0 {
+            obj.dir = 1.0;
+        }
+    }
+}
+
 fn coin_sound(
     audio_handles: Res<AudioHandles>,
     mut commands: Commands,
@@ -320,8 +341,7 @@ fn update_buttons_visibility(
         PlayButtonAction::Quit,
         PlayButtonAction::Pause,
     ];
-    let mut action_index = 0;
-    for (_, mut visibility) in &mut visibility_query {
+    for (action_index, (_, mut visibility)) in (&mut visibility_query).into_iter().enumerate() {
         match actions[action_index] {
             PlayButtonAction::Play => {
                 *visibility = if *play_state == PlayState::Ready {
@@ -352,8 +372,6 @@ fn update_buttons_visibility(
                 }
             }
         }
-
-        action_index += 1;
     }
 
     *score_visibility_query.single_mut().1 = if *play_state != PlayState::Ready {

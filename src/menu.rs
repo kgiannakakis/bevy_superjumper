@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use crate::{cleanup, click_sound, GameMusic, GameState, SoundDisabled};
 use bevy::prelude::*;
 

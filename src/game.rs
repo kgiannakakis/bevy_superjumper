@@ -1,7 +1,10 @@
 #![allow(clippy::type_complexity)]
 use rand::Rng;
 
-use crate::{cleanup, click_sound, play_sound, AudioHandles, Background, GameState, SoundDisabled};
+use crate::{
+    cleanup, click_sound, help::has_user_input, play_sound, AudioHandles, Background, GameState,
+    SoundDisabled,
+};
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 
 use bob::Bob;
@@ -28,10 +31,16 @@ struct MovingObject {
 }
 
 #[derive(Component)]
+struct GameUi;
+
+#[derive(Component)]
 struct GameButtonUi;
 
 #[derive(Component)]
 struct ScoreUi;
+
+#[derive(Component)]
+struct GameOverUi;
 
 #[derive(Resource, Default)]
 pub struct Points(u32);
@@ -43,7 +52,7 @@ enum PlayState {
     Running,
     Paused,
     // LevelEnd,
-    // GameOver,
+    GameOver,
 }
 
 #[derive(Component)]
@@ -100,7 +109,13 @@ impl Plugin for GamePlugin {
                     check_spring_collisions,
                 )
                     .run_if(in_state(GameState::Playing).and_then(in_state(PlayState::Running))),
-            );
+            )
+            .add_systems(
+                Update,
+                (go_back_to_menu.run_if(has_user_input))
+                    .run_if(in_state(GameState::Playing).and_then(in_state(PlayState::GameOver))),
+            )
+            .add_systems(OnEnter(PlayState::GameOver), spawn_game_over_ui);
     }
 }
 
@@ -150,10 +165,11 @@ fn setup_play(
 
     bob::setup_bob(&mut commands, &asset_server, &mut texture_atlases);
 
-    // Spawn the score UI
+    // Spawn the game UI
     commands
         .spawn((
             GameEntity,
+            GameUi,
             NodeBundle {
                 style: Style {
                     width: Val::Percent(100.0),
@@ -248,6 +264,86 @@ fn setup_play(
                         .with_text_alignment(TextAlignment::Left),
                         ScoreUi,
                     ));
+                });
+        });
+}
+
+fn spawn_game_over_ui(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    game_ui_query: Query<Entity, With<GameUi>>,
+    mut points: ResMut<Points>,
+) {
+    for entity in game_ui_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+
+    let score = points.0;
+    let score_title = format!("SCORE: {}", score);
+    points.0 = 0;
+
+    commands
+        .spawn((
+            GameEntity,
+            GameOverUi,
+            NodeBundle {
+                style: Style {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    flex_direction: FlexDirection::Column,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn(NodeBundle {
+                    style: Style {
+                        flex_direction: FlexDirection::Column,
+                        align_items: AlignItems::Center,
+                        position_type: PositionType::Absolute,
+                        top: Val::Px(10.0),
+                        ..default()
+                    },
+                    ..default()
+                })
+                .with_children(|parent| {
+                    parent.spawn((
+                        TextBundle::from_section(
+                            score_title,
+                            TextStyle {
+                                font: asset_server.load("fonts/Retroville NC.ttf"),
+                                font_size: 30.0,
+                                color: Color::WHITE,
+                            },
+                        )
+                        .with_text_alignment(TextAlignment::Left),
+                        ScoreUi,
+                    ));
+                });
+
+            parent
+                .spawn(NodeBundle {
+                    style: Style {
+                        flex_direction: FlexDirection::Column,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    ..default()
+                })
+                .with_children(|parent| {
+                    parent.spawn((TextBundle::from_section(
+                        "GAME OVER",
+                        TextStyle {
+                            font: asset_server.load("fonts/Retroville NC.ttf"),
+                            font_size: 40.0,
+                            color: Color::WHITE,
+                        },
+                    )
+                    .with_text_alignment(TextAlignment::Left),));
                 });
         });
 }
@@ -347,6 +443,7 @@ fn check_squirrel_collisions(
     audio_handles: Res<AudioHandles>,
     mut commands: Commands,
     sound_disabled: Res<SoundDisabled>,
+    mut play_state: ResMut<NextState<PlayState>>,
 ) {
     let bob_transform = bob_query.single();
     for &squirrel_transform in &mut squirrels_query {
@@ -359,6 +456,8 @@ fn check_squirrel_collisions(
         .is_some()
         {
             play_sound(audio_handles.hit.clone(), &mut commands, &sound_disabled);
+            play_state.set(PlayState::GameOver);
+            return;
         }
     }
 }
@@ -398,13 +497,18 @@ fn ui_action(
     >,
     mut game_state: ResMut<NextState<GameState>>,
     mut play_state: ResMut<NextState<PlayState>>,
+    mut points: ResMut<Points>,
 ) {
     for (interaction, menu_button_action) in &interaction_query {
         if *interaction == Interaction::Pressed {
             match menu_button_action {
                 PlayButtonAction::Play => play_state.set(PlayState::Running),
                 PlayButtonAction::Resume => play_state.set(PlayState::Running),
-                PlayButtonAction::Quit => game_state.set(GameState::Menu),
+                PlayButtonAction::Quit => {
+                    play_state.set(PlayState::Ready);
+                    game_state.set(GameState::Menu);
+                    points.0 = 0;
+                }
                 PlayButtonAction::Pause => play_state.set(PlayState::Paused),
             }
         }
@@ -477,4 +581,12 @@ fn reset_camera(
 ) {
     camera_query.single_mut().translation.y = 0.0;
     bg_query.single_mut().translation.y = 0.0;
+}
+
+fn go_back_to_menu(
+    mut game_state: ResMut<NextState<GameState>>,
+    mut play_state: ResMut<NextState<PlayState>>,
+) {
+    play_state.set(PlayState::Ready);
+    game_state.set(GameState::Menu);
 }

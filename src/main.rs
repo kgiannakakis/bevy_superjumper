@@ -27,9 +27,9 @@ struct Background;
 struct AudioHandles {
     click: Handle<AudioSource>,
     coin: Handle<AudioSource>,
-    // jump: Handle<AudioSource>,
-    // highjump: Handle<AudioSource>,
-    // hit: Handle<AudioSource>,
+    jump: Handle<AudioSource>,
+    highjump: Handle<AudioSource>,
+    hit: Handle<AudioSource>,
 }
 
 #[derive(Resource, Default)]
@@ -83,9 +83,9 @@ fn scene_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Load audio files
     commands.insert_resource(AudioHandles {
         coin: asset_server.load("audio/coin.ogg"),
-        // hit: asset_server.load("audio/hit.ogg"),
-        // jump: asset_server.load("audio/jump.ogg"),
-        // highjump: asset_server.load("audio/highjump.ogg"),
+        hit: asset_server.load("audio/hit.ogg"),
+        jump: asset_server.load("audio/jump.ogg"),
+        highjump: asset_server.load("audio/highjump.ogg"),
         click: asset_server.load("audio/click.ogg"),
     });
 }
@@ -115,6 +115,19 @@ fn click_sound(
     if !sound_disabled.0 {
         commands.spawn(AudioBundle {
             source: audio_handles.click.clone(),
+            ..default()
+        });
+    }
+}
+
+fn play_sound(
+    source: Handle<AudioSource>,
+    commands: &mut Commands,
+    sound_disabled: &Res<SoundDisabled>,
+) {
+    if !sound_disabled.0 {
+        commands.spawn(AudioBundle {
+            source,
             ..default()
         });
     }

@@ -1,18 +1,20 @@
 #![allow(clippy::type_complexity)]
 use rand::Rng;
 
-use crate::{cleanup, click_sound, AudioHandles, Background, GameState, SoundDisabled};
+use crate::{cleanup, click_sound, play_sound, AudioHandles, Background, GameState, SoundDisabled};
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 
 use bob::Bob;
 use coin::Coin;
 use platform::Platform;
+use spring::Spring;
 use squirrel::Squirrel;
 
 mod bob;
 mod coin;
 mod level;
 mod platform;
+mod spring;
 mod squirrel;
 
 #[derive(Component)]
@@ -95,6 +97,7 @@ impl Plugin for GamePlugin {
                     check_platform_collisions,
                     check_coin_collisions,
                     check_squirrel_collisions,
+                    check_spring_collisions,
                 )
                     .run_if(in_state(GameState::Playing).and_then(in_state(PlayState::Running))),
             );
@@ -135,7 +138,13 @@ fn setup_play(
                     Vec2::new(object.x - 160.0, object.y - 240.0),
                 );
             }
-            level::GameObjectType::Spring => todo!(),
+            level::GameObjectType::Spring => {
+                spring::spawn_spring(
+                    &mut commands,
+                    &asset_server,
+                    Vec2::new(object.x - 160.0, object.y - 240.0),
+                );
+            }
         }
     }
 
@@ -246,29 +255,66 @@ fn setup_play(
 fn check_platform_collisions(
     mut bob_query: Query<(&Transform, &mut Bob), With<Bob>>,
     mut platforms_query: Query<(&Transform, &mut Platform), With<Platform>>,
+    audio_handles: Res<AudioHandles>,
+    mut commands: Commands,
+    sound_disabled: Res<SoundDisabled>,
 ) {
-    for (&bob_transform, mut bob) in &mut bob_query {
-        if bob.velocity.y > 0.0 {
+    let (&bob_transform, mut bob) = bob_query.single_mut();
+    if bob.velocity.y > 0.0 {
+        return;
+    }
+
+    for (&platform_transform, mut platform) in &mut platforms_query {
+        if collide(
+            bob_transform.translation,
+            bob::BOB_SIZE,
+            platform_transform.translation,
+            platform::PLATFORM_SIZE,
+        )
+        .is_some()
+        {
+            bob.velocity.y = bob::BOB_JUMP_VELOCITY;
+
+            play_sound(audio_handles.jump.clone(), &mut commands, &sound_disabled);
+
+            let mut rng = rand::thread_rng();
+            if rng.gen_range(0.0..1.0) > 0.5 {
+                platform.state = platform::PlatformState::Pulverizing;
+            }
             return;
         }
+    }
+}
 
-        for (&platform_transform, mut platform) in &mut platforms_query {
-            if collide(
-                bob_transform.translation,
-                bob::BOB_SIZE,
-                platform_transform.translation,
-                platform::PLATFORM_SIZE,
-            )
-            .is_some()
-            {
-                bob.velocity.y = bob::BOB_JUMP_VELOCITY;
+fn check_spring_collisions(
+    mut bob_query: Query<(&Transform, &mut Bob), With<Bob>>,
+    springs_query: Query<&Transform, With<Spring>>,
+    audio_handles: Res<AudioHandles>,
+    mut commands: Commands,
+    sound_disabled: Res<SoundDisabled>,
+) {
+    let (&bob_transform, mut bob) = bob_query.single_mut();
 
-                let mut rng = rand::thread_rng();
-                if rng.gen_range(0.0..1.0) > 0.5 {
-                    platform.state = platform::PlatformState::Pulverizing;
-                }
-                return;
-            }
+    if bob.velocity.y > 0.0 {
+        return;
+    }
+
+    for &spring_transform in &springs_query {
+        if collide(
+            bob_transform.translation,
+            bob::BOB_SIZE,
+            spring_transform.translation,
+            spring::SPRING_SIZE,
+        )
+        .is_some()
+        {
+            bob.velocity.y = bob::BOB_JUMP_VELOCITY * 1.5;
+            play_sound(
+                audio_handles.highjump.clone(),
+                &mut commands,
+                &sound_disabled,
+            );
+            return;
         }
     }
 }
@@ -298,6 +344,9 @@ fn check_coin_collisions(
 fn check_squirrel_collisions(
     bob_query: Query<&Transform, With<Bob>>,
     mut squirrels_query: Query<&Transform, With<Squirrel>>,
+    audio_handles: Res<AudioHandles>,
+    mut commands: Commands,
+    sound_disabled: Res<SoundDisabled>,
 ) {
     let bob_transform = bob_query.single();
     for &squirrel_transform in &mut squirrels_query {
@@ -309,7 +358,7 @@ fn check_squirrel_collisions(
         )
         .is_some()
         {
-            println!("Hit");
+            play_sound(audio_handles.hit.clone(), &mut commands, &sound_disabled);
         }
     }
 }

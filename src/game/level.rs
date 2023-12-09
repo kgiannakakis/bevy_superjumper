@@ -1,6 +1,6 @@
 use rand::Rng;
 
-use super::{bob, coin, platform, squirrel};
+use super::{bob, coin, platform, spring, squirrel};
 
 const WORLD_WIDTH: f32 = 10.0 * 32.0;
 const WORLD_HEIGHT: f32 = 15.0 * 32.0 * 20.0;
@@ -33,6 +33,14 @@ pub fn generate_level() -> Vec<GameObject> {
             x,
             y,
         });
+
+        if rng.gen_range(0.0..1.0) > 0.9 && !moving {
+            objects.push(GameObject {
+                object_type: GameObjectType::Spring,
+                x,
+                y: y + (platform::PLATFORM_HEIGHT + spring::SPRING_HEIGHT) / 2.0,
+            });
+        }
 
         if rng.gen_range(0.0..1.0) > 0.6 {
             objects.push(GameObject {

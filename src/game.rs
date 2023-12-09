@@ -1,4 +1,5 @@
 #![allow(clippy::type_complexity)]
+use rand::Rng;
 
 use crate::{cleanup, click_sound, AudioHandles, Background, GameState, SoundDisabled};
 use bevy::{prelude::*, sprite::collide_aabb::collide};
@@ -6,11 +7,13 @@ use bevy::{prelude::*, sprite::collide_aabb::collide};
 use bob::Bob;
 use coin::Coin;
 use platform::Platform;
+use squirrel::Squirrel;
 
 mod bob;
 mod coin;
 mod level;
 mod platform;
+mod squirrel;
 
 #[derive(Component)]
 struct GameEntity;
@@ -86,10 +89,12 @@ impl Plugin for GamePlugin {
                     bob::update_bob,
                     bob::move_bob,
                     coin::animate_coins,
+                    squirrel::animate_squirrels,
                     platform::animate_platforms,
                     move_objects,
                     check_platform_collisions,
                     check_coin_collisions,
+                    check_squirrel_collisions,
                 )
                     .run_if(in_state(GameState::Playing).and_then(in_state(PlayState::Running))),
             );
@@ -114,7 +119,14 @@ fn setup_play(
                     Vec2::new(object.x - 160.0, object.y - 240.0),
                 );
             }
-            level::GameObjectType::Squirrel => todo!(),
+            level::GameObjectType::Squirrel => {
+                squirrel::spawn_squirrel(
+                    &mut commands,
+                    &asset_server,
+                    &mut texture_atlases,
+                    Vec2::new(object.x - 160.0, object.y - 240.0),
+                );
+            }
             level::GameObjectType::Coin => {
                 coin::spawn_coin(
                     &mut commands,
@@ -250,7 +262,11 @@ fn check_platform_collisions(
             .is_some()
             {
                 bob.velocity.y = bob::BOB_JUMP_VELOCITY;
-                platform.state = platform::PlatformState::Pulverizing;
+
+                let mut rng = rand::thread_rng();
+                if rng.gen_range(0.0..1.0) > 0.5 {
+                    platform.state = platform::PlatformState::Pulverizing;
+                }
                 return;
             }
         }
@@ -275,6 +291,25 @@ fn check_coin_collisions(
         {
             points.0 += coin::COIN_SCORE;
             commands.entity(entity).despawn_recursive();
+        }
+    }
+}
+
+fn check_squirrel_collisions(
+    bob_query: Query<&Transform, With<Bob>>,
+    mut squirrels_query: Query<&Transform, With<Squirrel>>,
+) {
+    let bob_transform = bob_query.single();
+    for &squirrel_transform in &mut squirrels_query {
+        if collide(
+            bob_transform.translation,
+            bob::BOB_SIZE,
+            squirrel_transform.translation,
+            squirrel::SQUIRREL_SIZE,
+        )
+        .is_some()
+        {
+            println!("Hit");
         }
     }
 }

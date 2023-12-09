@@ -72,7 +72,7 @@ pub(super) fn update_bob(
         if bob.velocity.y >= 0.0 {
             bob.velocity.y = 0.0;
         }
-        if transform.translation.y > camera.translation.y -240.0 {
+        if transform.translation.y > camera.translation.y - 240.0 {
             transform.translation.y += bob.velocity.y * time.delta_seconds();
         }
     } else {
@@ -112,4 +112,17 @@ pub(super) fn move_bob(mut bob: Query<&mut Bob, With<Bob>>, keyboard_input: Res<
 pub(super) fn animate_bob_death(mut bob_query: Query<&mut TextureAtlasSprite, With<Bob>>) {
     let mut bob_ta = bob_query.single_mut();
     bob_ta.index = 4;
+}
+
+pub(super) fn check_bob_has_fallen(
+    bob_query: Query<&Transform, With<Bob>>,
+    camera_query: Query<&Transform, (With<Camera>, Without<Bob>)>,
+    mut play_state: ResMut<NextState<PlayState>>,
+) {
+    let bob_transform = bob_query.single();
+    let camera = camera_query.single();
+
+    if bob_transform.translation.y <= camera.translation.y - 240.0 && camera.translation.y > 0.0 {
+        play_state.set(PlayState::GameOver);
+    }
 }

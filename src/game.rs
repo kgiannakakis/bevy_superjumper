@@ -99,6 +99,7 @@ impl Plugin for GamePlugin {
                     bob::animate_bob,
                     bob::update_bob,
                     bob::move_bob,
+                    bob::check_bob_has_fallen,
                     coin::animate_coins,
                     squirrel::animate_squirrels,
                     platform::animate_platforms,

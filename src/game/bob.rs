@@ -1,4 +1,4 @@
-use super::GameEntity;
+use super::{GameEntity, PlayState};
 use crate::Background;
 use bevy::prelude::*;
 
@@ -46,14 +46,13 @@ pub(super) fn animate_bob(
     mut bob_query: Query<(&mut TextureAtlasSprite, &mut Transform, &Bob), With<Bob>>,
     time: Res<Time>,
 ) {
-    for (mut bob_ta, mut transform, bob) in &mut bob_query {
-        bob_ta.index = 2 + ((time.elapsed_seconds() * BOB_ANIMATION_SPEED) as usize % 2);
+    let (mut bob_ta, mut transform, bob) = bob_query.single_mut();
+    bob_ta.index = 2 + ((time.elapsed_seconds() * BOB_ANIMATION_SPEED) as usize % 2);
 
-        if bob.velocity.x < 0.0 {
-            transform.rotation = Quat::from_rotation_y(std::f32::consts::PI);
-        } else {
-            transform.rotation = Quat::default();
-        }
+    if bob.velocity.x < 0.0 {
+        transform.rotation = Quat::from_rotation_y(std::f32::consts::PI);
+    } else {
+        transform.rotation = Quat::default();
     }
 }
 
@@ -61,28 +60,40 @@ pub(super) fn update_bob(
     mut bob_query: Query<(&mut Transform, &mut Bob), With<Bob>>,
     mut camera_query: Query<&mut Transform, (With<Camera>, Without<Bob>, Without<Background>)>,
     mut bg_query: Query<&mut Transform, (With<Background>, Without<Bob>, Without<Camera>)>,
+    play_state: Res<State<PlayState>>,
     time: Res<Time>,
 ) {
     let (mut transform, mut bob) = bob_query.single_mut();
-    bob.velocity.y += GRAVITY_Y * time.delta_seconds();
-    transform.translation.x += bob.velocity.x * time.delta_seconds();
-    transform.translation.y += bob.velocity.y * time.delta_seconds();
-
-    if transform.translation.y < -240.0 + 16.0 {
-        bob.velocity.y = BOB_JUMP_VELOCITY;
-    }
-
-    if transform.translation.x < -160.0 {
-        transform.translation.x += 320.0;
-    }
-    if transform.translation.x > 160.0 {
-        transform.translation.x -= 320.0;
-    }
-
     let mut camera = camera_query.single_mut();
-    if transform.translation.y > camera.translation.y {
-        camera.translation.y = transform.translation.y;
-        bg_query.single_mut().translation.y = transform.translation.y;
+
+    bob.velocity.y += GRAVITY_Y * time.delta_seconds();
+
+    if *play_state == PlayState::GameOver {
+        if bob.velocity.y >= 0.0 {
+            bob.velocity.y = 0.0;
+        }
+        if transform.translation.y > camera.translation.y -240.0 {
+            transform.translation.y += bob.velocity.y * time.delta_seconds();
+        }
+    } else {
+        transform.translation.x += bob.velocity.x * time.delta_seconds();
+        transform.translation.y += bob.velocity.y * time.delta_seconds();
+
+        if transform.translation.y < -240.0 + 16.0 {
+            bob.velocity.y = BOB_JUMP_VELOCITY;
+        }
+
+        if transform.translation.x < -160.0 {
+            transform.translation.x += 320.0;
+        }
+        if transform.translation.x > 160.0 {
+            transform.translation.x -= 320.0;
+        }
+
+        if transform.translation.y > camera.translation.y {
+            camera.translation.y = transform.translation.y;
+            bg_query.single_mut().translation.y = transform.translation.y;
+        }
     }
 }
 
@@ -96,4 +107,9 @@ pub(super) fn move_bob(mut bob: Query<&mut Bob, With<Bob>>, keyboard_input: Res<
             bob.velocity.x = 0.0;
         }
     }
+}
+
+pub(super) fn animate_bob_death(mut bob_query: Query<&mut TextureAtlasSprite, With<Bob>>) {
+    let mut bob_ta = bob_query.single_mut();
+    bob_ta.index = 4;
 }

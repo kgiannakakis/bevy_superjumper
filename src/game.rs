@@ -112,10 +112,13 @@ impl Plugin for GamePlugin {
             )
             .add_systems(
                 Update,
-                (go_back_to_menu.run_if(has_user_input))
+                (go_back_to_menu.run_if(has_user_input), bob::update_bob)
                     .run_if(in_state(GameState::Playing).and_then(in_state(PlayState::GameOver))),
             )
-            .add_systems(OnEnter(PlayState::GameOver), spawn_game_over_ui);
+            .add_systems(
+                OnEnter(PlayState::GameOver),
+                (bob::animate_bob_death, spawn_game_over_ui),
+            );
     }
 }
 

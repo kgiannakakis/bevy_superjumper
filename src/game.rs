@@ -8,12 +8,14 @@ use crate::{
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 
 use bob::Bob;
+use castle::Castle;
 use coin::Coin;
 use platform::Platform;
 use spring::Spring;
 use squirrel::Squirrel;
 
 mod bob;
+mod castle;
 mod coin;
 mod level;
 mod platform;
@@ -51,7 +53,6 @@ enum PlayState {
     Ready,
     Running,
     Paused,
-    // LevelEnd,
     GameOver,
 }
 
@@ -78,7 +79,7 @@ impl Plugin for GamePlugin {
             .add_systems(OnEnter(GameState::Playing), setup_play)
             .add_systems(
                 OnExit(GameState::Playing),
-                (click_sound, cleanup::<GameEntity>, reset_camera),
+                (click_sound, cleanup::<GameEntity>, reset_play),
             )
             .add_systems(
                 Update,
@@ -108,6 +109,7 @@ impl Plugin for GamePlugin {
                     check_coin_collisions,
                     check_squirrel_collisions,
                     check_spring_collisions,
+                    check_castle_collisions,
                 )
                     .run_if(in_state(GameState::Playing).and_then(in_state(PlayState::Running))),
             )
@@ -159,6 +161,13 @@ fn setup_play(
             }
             level::GameObjectType::Spring => {
                 spring::spawn_spring(
+                    &mut commands,
+                    &asset_server,
+                    Vec2::new(object.x - 160.0, object.y - 240.0),
+                );
+            }
+            level::GameObjectType::Castle => {
+                castle::spawn_castle(
                     &mut commands,
                     &asset_server,
                     Vec2::new(object.x - 160.0, object.y - 240.0),
@@ -276,7 +285,7 @@ fn spawn_game_over_ui(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     game_ui_query: Query<Entity, With<GameUi>>,
-    mut points: ResMut<Points>,
+    points: Res<Points>,
 ) {
     for entity in game_ui_query.iter() {
         commands.entity(entity).despawn_recursive();
@@ -284,7 +293,6 @@ fn spawn_game_over_ui(
 
     let score = points.0;
     let score_title = format!("SCORE: {}", score);
-    points.0 = 0;
 
     commands
         .spawn((
@@ -466,6 +474,26 @@ fn check_squirrel_collisions(
     }
 }
 
+fn check_castle_collisions(
+    bob_query: Query<&Transform, With<Bob>>,
+    castles_query: Query<&Transform, With<Castle>>,
+    mut game_state: ResMut<NextState<GameState>>,
+) {
+    let bob_transform = bob_query.single();
+    let castle_transform = castles_query.single();
+
+    if collide(
+        bob_transform.translation,
+        bob::BOB_SIZE,
+        castle_transform.translation,
+        castle::CASTLE_SIZE,
+    )
+    .is_some()
+    {
+        game_state.set(GameState::WinScreen);
+    }
+}
+
 fn move_objects(
     mut objects_query: Query<(&mut MovingObject, &mut Transform), With<MovingObject>>,
     time: Res<Time>,
@@ -501,7 +529,6 @@ fn ui_action(
     >,
     mut game_state: ResMut<NextState<GameState>>,
     mut play_state: ResMut<NextState<PlayState>>,
-    mut points: ResMut<Points>,
 ) {
     for (interaction, menu_button_action) in &interaction_query {
         if *interaction == Interaction::Pressed {
@@ -511,7 +538,6 @@ fn ui_action(
                 PlayButtonAction::Quit => {
                     play_state.set(PlayState::Ready);
                     game_state.set(GameState::Menu);
-                    points.0 = 0;
                 }
                 PlayButtonAction::Pause => play_state.set(PlayState::Paused),
             }
@@ -579,12 +605,14 @@ fn update_score_text(mut query: Query<&mut Text, With<ScoreUi>>, points: Res<Poi
     }
 }
 
-fn reset_camera(
+fn reset_play(
     mut camera_query: Query<&mut Transform, (With<Camera>, Without<Background>)>,
     mut bg_query: Query<&mut Transform, (With<Background>, Without<Camera>)>,
+    mut points: ResMut<Points>,
 ) {
     camera_query.single_mut().translation.y = 0.0;
     bg_query.single_mut().translation.y = 0.0;
+    points.0 = 0;
 }
 
 fn go_back_to_menu(

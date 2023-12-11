@@ -6,13 +6,14 @@ mod game;
 mod help;
 mod highscores;
 mod menu;
+mod winscreen;
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 enum GameState {
     #[default]
     Menu,
     Playing,
-    //GameOver,
+    WinScreen,
     Help,
     HighScores,
 }
@@ -60,6 +61,7 @@ fn main() {
             help::HelpPlugin,
             game::GamePlugin,
             highscores::HighScoresPlugin,
+            winscreen::WinScreenPlugin,
         ))
         .run();
 }

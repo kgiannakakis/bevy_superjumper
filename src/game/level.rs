@@ -10,6 +10,7 @@ pub enum GameObjectType {
     Squirrel,
     Coin,
     Spring,
+    Castle,
 }
 pub struct GameObject {
     pub object_type: GameObjectType,
@@ -61,6 +62,12 @@ pub fn generate_level() -> Vec<GameObject> {
         y += max_jump_height - 0.5 * 32.0;
         y -= rng.gen_range(0.0..1.0) * (max_jump_height / 3.0);
     }
+
+    objects.push(GameObject {
+        object_type: GameObjectType::Castle,
+        x: WORLD_WIDTH / 2.0,
+        y,
+    });
 
     objects
 }

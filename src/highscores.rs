@@ -4,6 +4,24 @@ use bevy::prelude::*;
 #[derive(Component)]
 struct HighScoresEntity;
 
+const HIGHSCORE_COUNT: usize = 5;
+
+#[derive(Resource)]
+pub struct HighScores([u32; HIGHSCORE_COUNT]);
+
+impl Default for HighScores {
+    fn default() -> Self {
+        const DEFAULT_HIGHSCORES: [u32; HIGHSCORE_COUNT] = [100, 80, 50, 30, 10];
+
+        let mut high_scores: [u32; HIGHSCORE_COUNT] = [0; HIGHSCORE_COUNT];
+        for (i, score) in DEFAULT_HIGHSCORES.iter().enumerate() {
+            high_scores[i] = *score;
+        }
+
+        Self(high_scores)
+    }
+}
+
 const TRANSPARENT: Color = Color::Rgba {
     red: 0.0,
     green: 0.0,
@@ -14,7 +32,8 @@ const TRANSPARENT: Color = Color::Rgba {
 pub struct HighScoresPlugin;
 impl Plugin for HighScoresPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::HighScores), setup_highscores)
+        app.init_resource::<HighScores>()
+            .add_systems(OnEnter(GameState::HighScores), setup_highscores)
             .add_systems(
                 OnExit(GameState::HighScores),
                 (click_sound, cleanup::<HighScoresEntity>),
@@ -23,7 +42,11 @@ impl Plugin for HighScoresPlugin {
     }
 }
 
-fn setup_highscores(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup_highscores(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    high_scores: Res<HighScores>,
+) {
     commands
         .spawn((
             NodeBundle {
@@ -62,10 +85,10 @@ fn setup_highscores(mut commands: Commands, asset_server: Res<AssetServer>) {
                     ..default()
                 })
                 .with_children(|parent| {
-                    for i in 1..6 {
+                    for (i, score) in high_scores.0.into_iter().enumerate() {
                         parent.spawn(
                             TextBundle::from_section(
-                                format!("{}. {}", i, 100 - (i - 1) * 20),
+                                format!("{}. {}", i + 1, score),
                                 TextStyle {
                                     font: asset_server.load("fonts/Retroville NC.ttf"),
                                     font_size: 30.0,
@@ -107,4 +130,13 @@ fn ui_action(
             game_state.set(GameState::Menu);
         }
     }
+}
+
+pub fn is_highscore(high_scores: &Res<HighScores>, score: u32) -> bool {
+    for current_score in high_scores.0.into_iter().rev() {
+        if current_score < score {
+            return true;
+        }
+    }
+    false
 }

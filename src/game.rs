@@ -2,8 +2,10 @@
 use rand::Rng;
 
 use crate::{
-    cleanup, click_sound, help::has_user_input, play_sound, AudioHandles, Background, GameState,
-    SoundDisabled,
+    cleanup, click_sound,
+    help::has_user_input,
+    highscores::{is_highscore, HighScores},
+    play_sound, AudioHandles, Background, GameState, SoundDisabled,
 };
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 
@@ -286,13 +288,18 @@ fn spawn_game_over_ui(
     asset_server: Res<AssetServer>,
     game_ui_query: Query<Entity, With<GameUi>>,
     points: Res<Points>,
+    high_scores: Res<HighScores>,
 ) {
     for entity in game_ui_query.iter() {
         commands.entity(entity).despawn_recursive();
     }
 
     let score = points.0;
-    let score_title = format!("SCORE: {}", score);
+    let score_title = if is_highscore(&high_scores, score) {
+        format!("NEW HIGHSCORE: {}", score)
+    } else {
+        format!("SCORE: {}", score)
+    };
 
     commands
         .spawn((

@@ -4,7 +4,7 @@ use rand::Rng;
 use crate::{
     cleanup, click_sound,
     help::has_user_input,
-    highscores::{is_highscore, HighScores},
+    highscores::{check_and_update_highscores, HighScores},
     play_sound, AudioHandles, Background, GameState, SoundDisabled,
 };
 use bevy::{prelude::*, sprite::collide_aabb::collide};
@@ -288,14 +288,14 @@ fn spawn_game_over_ui(
     asset_server: Res<AssetServer>,
     game_ui_query: Query<Entity, With<GameUi>>,
     points: Res<Points>,
-    high_scores: Res<HighScores>,
+    mut high_scores: ResMut<HighScores>,
 ) {
     for entity in game_ui_query.iter() {
         commands.entity(entity).despawn_recursive();
     }
 
     let score = points.0;
-    let score_title = if is_highscore(&high_scores, score) {
+    let score_title = if check_and_update_highscores(&mut high_scores, score) {
         format!("NEW HIGHSCORE: {}", score)
     } else {
         format!("SCORE: {}", score)
@@ -485,6 +485,8 @@ fn check_castle_collisions(
     bob_query: Query<&Transform, With<Bob>>,
     castles_query: Query<&Transform, With<Castle>>,
     mut game_state: ResMut<NextState<GameState>>,
+    points: Res<Points>,
+    mut high_scores: ResMut<HighScores>,
 ) {
     let bob_transform = bob_query.single();
     let castle_transform = castles_query.single();
@@ -497,6 +499,7 @@ fn check_castle_collisions(
     )
     .is_some()
     {
+        check_and_update_highscores(&mut high_scores, points.0);
         game_state.set(GameState::WinScreen);
     }
 }
@@ -536,6 +539,8 @@ fn ui_action(
     >,
     mut game_state: ResMut<NextState<GameState>>,
     mut play_state: ResMut<NextState<PlayState>>,
+    points: Res<Points>,
+    mut high_scores: ResMut<HighScores>,
 ) {
     for (interaction, menu_button_action) in &interaction_query {
         if *interaction == Interaction::Pressed {
@@ -543,6 +548,7 @@ fn ui_action(
                 PlayButtonAction::Play => play_state.set(PlayState::Running),
                 PlayButtonAction::Resume => play_state.set(PlayState::Running),
                 PlayButtonAction::Quit => {
+                    check_and_update_highscores(&mut high_scores, points.0);
                     play_state.set(PlayState::Ready);
                     game_state.set(GameState::Menu);
                 }

@@ -132,11 +132,17 @@ fn ui_action(
     }
 }
 
-pub fn is_highscore(high_scores: &Res<HighScores>, score: u32) -> bool {
-    for current_score in high_scores.0.into_iter().rev() {
-        if current_score < score {
-            return true;
+pub fn check_and_update_highscores(high_scores: &mut ResMut<HighScores>, score: u32) -> bool {
+    let mut is_highscore = false;
+    let mut prev_score: u32 = 0;
+    for (i, current_score) in high_scores.0.into_iter().enumerate() {
+        if is_highscore {
+            std::mem::swap(&mut high_scores.0[i], &mut prev_score);
+        } else if current_score < score {
+            is_highscore = true;
+            prev_score = current_score;
+            high_scores.0[i] = score;
         }
     }
-    false
+    is_highscore
 }

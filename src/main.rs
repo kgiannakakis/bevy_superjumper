@@ -1,11 +1,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use bevy::{audio::Volume, prelude::*, render::camera::ScalingMode, window::WindowResolution};
+use settings::read_settings;
 
 mod game;
 mod help;
 mod highscores;
 mod menu;
+mod settings;
 mod winscreen;
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
@@ -33,8 +35,14 @@ struct AudioHandles {
     hit: Handle<AudioSource>,
 }
 
-#[derive(Resource, Default)]
-pub struct SoundDisabled(bool);
+#[derive(Resource)]
+pub struct SoundEnabled(bool);
+
+impl Default for SoundEnabled {
+    fn default() -> Self {
+        Self(read_settings().sound_enabled)
+    }
+}
 
 fn main() {
     App::new()
@@ -51,7 +59,7 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
-        .init_resource::<SoundDisabled>()
+        .init_resource::<SoundEnabled>()
         .add_state::<GameState>()
         .add_systems(Startup, (scene_setup, play_music))
         .add_plugins((
@@ -112,9 +120,9 @@ fn play_music(mut commands: Commands, asset_server: Res<AssetServer>) {
 fn click_sound(
     audio_handles: Res<AudioHandles>,
     mut commands: Commands,
-    sound_disabled: Res<SoundDisabled>,
+    sound_enabled: Res<SoundEnabled>,
 ) {
-    if !sound_disabled.0 {
+    if sound_enabled.0 {
         commands.spawn(AudioBundle {
             source: audio_handles.click.clone(),
             ..default()
@@ -125,9 +133,9 @@ fn click_sound(
 fn play_sound(
     source: Handle<AudioSource>,
     commands: &mut Commands,
-    sound_disabled: &Res<SoundDisabled>,
+    sound_enabled: &Res<SoundEnabled>,
 ) {
-    if !sound_disabled.0 {
+    if sound_enabled.0 {
         commands.spawn(AudioBundle {
             source,
             ..default()

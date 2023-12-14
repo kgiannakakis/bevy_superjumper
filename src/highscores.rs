@@ -1,24 +1,19 @@
-use crate::{cleanup, click_sound, GameState};
+use crate::{
+    cleanup, click_sound,
+    settings::{read_settings, HIGHSCORE_COUNT},
+    GameState,
+};
 use bevy::prelude::*;
 
 #[derive(Component)]
 struct HighScoresEntity;
-
-const HIGHSCORE_COUNT: usize = 5;
 
 #[derive(Resource)]
 pub struct HighScores([u32; HIGHSCORE_COUNT]);
 
 impl Default for HighScores {
     fn default() -> Self {
-        const DEFAULT_HIGHSCORES: [u32; HIGHSCORE_COUNT] = [100, 80, 50, 30, 10];
-
-        let mut high_scores: [u32; HIGHSCORE_COUNT] = [0; HIGHSCORE_COUNT];
-        for (i, score) in DEFAULT_HIGHSCORES.iter().enumerate() {
-            high_scores[i] = *score;
-        }
-
-        Self(high_scores)
+        Self(read_settings().high_scores)
     }
 }
 

@@ -5,7 +5,7 @@ use crate::{
     cleanup, click_sound,
     help::has_user_input,
     highscores::{check_and_update_highscores, HighScores},
-    play_sound, AudioHandles, Background, GameState, SoundDisabled,
+    play_sound, AudioHandles, Background, GameState, SoundEnabled,
 };
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 
@@ -372,7 +372,7 @@ fn check_platform_collisions(
     mut platforms_query: Query<(&Transform, &mut Platform), With<Platform>>,
     audio_handles: Res<AudioHandles>,
     mut commands: Commands,
-    sound_disabled: Res<SoundDisabled>,
+    sound_enabled: Res<SoundEnabled>,
 ) {
     let (&bob_transform, mut bob) = bob_query.single_mut();
     if bob.velocity.y > 0.0 {
@@ -390,7 +390,7 @@ fn check_platform_collisions(
         {
             bob.velocity.y = bob::BOB_JUMP_VELOCITY;
 
-            play_sound(audio_handles.jump.clone(), &mut commands, &sound_disabled);
+            play_sound(audio_handles.jump.clone(), &mut commands, &sound_enabled);
 
             let mut rng = rand::thread_rng();
             if rng.gen_range(0.0..1.0) > 0.5 {
@@ -406,7 +406,7 @@ fn check_spring_collisions(
     springs_query: Query<&Transform, With<Spring>>,
     audio_handles: Res<AudioHandles>,
     mut commands: Commands,
-    sound_disabled: Res<SoundDisabled>,
+    sound_enabled: Res<SoundEnabled>,
 ) {
     let (&bob_transform, mut bob) = bob_query.single_mut();
 
@@ -427,7 +427,7 @@ fn check_spring_collisions(
             play_sound(
                 audio_handles.highjump.clone(),
                 &mut commands,
-                &sound_disabled,
+                &sound_enabled,
             );
             return;
         }
@@ -461,7 +461,7 @@ fn check_squirrel_collisions(
     mut squirrels_query: Query<&Transform, With<Squirrel>>,
     audio_handles: Res<AudioHandles>,
     mut commands: Commands,
-    sound_disabled: Res<SoundDisabled>,
+    sound_enabled: Res<SoundEnabled>,
     mut play_state: ResMut<NextState<PlayState>>,
 ) {
     let bob_transform = bob_query.single();
@@ -474,7 +474,7 @@ fn check_squirrel_collisions(
         )
         .is_some()
         {
-            play_sound(audio_handles.hit.clone(), &mut commands, &sound_disabled);
+            play_sound(audio_handles.hit.clone(), &mut commands, &sound_enabled);
             play_state.set(PlayState::GameOver);
             return;
         }
@@ -522,9 +522,9 @@ fn move_objects(
 fn coin_sound(
     audio_handles: Res<AudioHandles>,
     mut commands: Commands,
-    sound_disabled: Res<SoundDisabled>,
+    sound_enabled: Res<SoundEnabled>,
 ) {
-    if !sound_disabled.0 {
+    if sound_enabled.0 {
         commands.spawn(AudioBundle {
             source: audio_handles.coin.clone(),
             ..default()

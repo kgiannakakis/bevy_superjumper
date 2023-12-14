@@ -1,6 +1,6 @@
 #![allow(clippy::type_complexity)]
 
-use crate::{cleanup, click_sound, GameMusic, GameState, SoundDisabled};
+use crate::{cleanup, click_sound, GameMusic, GameState, SoundEnabled};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -37,8 +37,8 @@ impl Plugin for MenuPlugin {
                 (
                     menu_action,
                     click_sound.run_if(
-                        resource_changed::<SoundDisabled>()
-                            .and_then(not(resource_added::<SoundDisabled>())),
+                        resource_changed::<SoundEnabled>()
+                            .and_then(not(resource_added::<SoundEnabled>())),
                     ),
                 )
                     .run_if(in_state(GameState::Menu)),
@@ -49,7 +49,7 @@ impl Plugin for MenuPlugin {
 fn setup_menu(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    sound_disabled: ResMut<SoundDisabled>,
+    sound_enabled: ResMut<SoundEnabled>,
 ) {
     commands
         .spawn((
@@ -122,10 +122,10 @@ fn setup_menu(
                     MenuButtonAction::SoundToggle,
                 ))
                 .with_children(|parent| {
-                    let path = if sound_disabled.0 {
-                        "sprites/soundOff.png"
-                    } else {
+                    let path = if sound_enabled.0 {
                         "sprites/soundOn.png"
+                    } else {
+                        "sprites/soundOff.png"
                     };
                     let icon = asset_server.load(path);
                     parent.spawn((
@@ -146,7 +146,7 @@ fn menu_action(
     >,
     mut game_state: ResMut<NextState<GameState>>,
     music_query: Query<&AudioSink, With<GameMusic>>,
-    mut sound_disabled: ResMut<SoundDisabled>,
+    mut sound_enabled: ResMut<SoundEnabled>,
     mut sound_button_query: Query<(Entity, &mut UiImage), With<SoundButton>>,
     asset_server: Res<AssetServer>,
 ) {
@@ -160,13 +160,13 @@ fn menu_action(
                     if let Ok(sink) = music_query.get_single() {
                         sink.toggle();
                     }
-                    sound_disabled.0 = !sound_disabled.0;
+                    sound_enabled.0 = !sound_enabled.0;
 
                     let (_, mut ui_image) = sound_button_query.single_mut();
-                    let path = if sound_disabled.0 {
-                        "sprites/soundOff.png"
-                    } else {
+                    let path = if sound_enabled.0 {
                         "sprites/soundOn.png"
+                    } else {
+                        "sprites/soundOff.png"
                     };
                     *ui_image = UiImage::new(asset_server.load(path));
                 }

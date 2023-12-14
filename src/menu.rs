@@ -1,7 +1,9 @@
 #![allow(clippy::type_complexity)]
 
-use crate::{cleanup, click_sound, GameMusic, GameState, SoundEnabled};
-use bevy::prelude::*;
+use crate::{
+    cleanup, click_sound, settings::write_sound_setting, GameMusic, GameState, SoundEnabled,
+};
+use bevy::{prelude::*, audio::Volume};
 
 #[derive(Component)]
 struct MenuEntity;
@@ -148,6 +150,7 @@ fn menu_action(
     music_query: Query<&AudioSink, With<GameMusic>>,
     mut sound_enabled: ResMut<SoundEnabled>,
     mut sound_button_query: Query<(Entity, &mut UiImage), With<SoundButton>>,
+    mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
     for (interaction, menu_button_action) in &interaction_query {
@@ -159,6 +162,15 @@ fn menu_action(
                 MenuButtonAction::SoundToggle => {
                     if let Ok(sink) = music_query.get_single() {
                         sink.toggle();
+                    } else {
+                        commands.spawn((
+                            AudioBundle {
+                                source: asset_server.load("audio/music.ogg"),
+                                settings: PlaybackSettings::LOOP
+                                    .with_volume(Volume::new_relative(0.1)),
+                            },
+                            GameMusic,
+                        ));
                     }
                     sound_enabled.0 = !sound_enabled.0;
 
@@ -169,6 +181,8 @@ fn menu_action(
                         "sprites/soundOff.png"
                     };
                     *ui_image = UiImage::new(asset_server.load(path));
+
+                    write_sound_setting(sound_enabled.0);
                 }
             }
         }

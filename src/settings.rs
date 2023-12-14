@@ -19,7 +19,7 @@ impl Default for Settings {
         }
 
         Settings {
-            sound_enabled: false,
+            sound_enabled: true,
             high_scores,
         }
     }
@@ -50,7 +50,7 @@ fn read_settings_file() -> Result<Settings, Box<dyn Error>> {
                 high_scores[i - 1] = score;
                 high_score_index = i;
             }
-        } else {
+        } else if !line.is_empty() {
             Err("Invalid file")?
         }
     }
@@ -63,4 +63,14 @@ fn read_settings_file() -> Result<Settings, Box<dyn Error>> {
         sound_enabled,
         high_scores,
     })
+}
+
+pub fn write_sound_setting(sound_enabled: bool) {
+    let mut data = format!("{}\n", sound_enabled);
+
+    for score in read_settings().high_scores {
+        data.push_str(&format!("{}\n", score));
+    }
+
+    let _ = fs::write(SETTINGS_FILE, data);
 }

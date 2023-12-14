@@ -107,14 +107,20 @@ pub fn cleanup<T: Component>(mut commands: Commands, query: Query<Entity, With<T
     }
 }
 
-fn play_music(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn((
-        AudioBundle {
-            source: asset_server.load("audio/music.ogg"),
-            settings: PlaybackSettings::LOOP.with_volume(Volume::new_relative(0.1)),
-        },
-        GameMusic,
-    ));
+fn play_music(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    sound_enabled: Res<SoundEnabled>,
+) {
+    if sound_enabled.0 {
+        commands.spawn((
+            AudioBundle {
+                source: asset_server.load("audio/music.ogg"),
+                settings: PlaybackSettings::LOOP.with_volume(Volume::new_relative(0.1)),
+            },
+            GameMusic,
+        ));
+    }
 }
 
 fn click_sound(

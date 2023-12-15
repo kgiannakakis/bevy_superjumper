@@ -74,3 +74,13 @@ pub fn write_sound_setting(sound_enabled: bool) {
 
     let _ = fs::write(SETTINGS_FILE, data);
 }
+
+pub fn write_high_scores(high_scores: [u32; HIGHSCORE_COUNT]) {
+    let mut data = format!("{}\n", read_settings().sound_enabled);
+
+    for score in high_scores {
+        data.push_str(&format!("{}\n", score));
+    }
+
+    let _ = fs::write(SETTINGS_FILE, data);
+}

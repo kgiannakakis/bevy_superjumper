@@ -3,7 +3,7 @@
 use crate::{
     cleanup, click_sound, settings::write_sound_setting, GameMusic, GameState, SoundEnabled,
 };
-use bevy::{prelude::*, audio::Volume};
+use bevy::{audio::Volume, prelude::*};
 
 #[derive(Component)]
 struct MenuEntity;

@@ -1,6 +1,6 @@
 use crate::{
     cleanup, click_sound,
-    settings::{read_settings, HIGHSCORE_COUNT},
+    settings::{read_settings, write_high_scores, HIGHSCORE_COUNT},
     GameState,
 };
 use bevy::prelude::*;
@@ -138,6 +138,9 @@ pub fn check_and_update_highscores(high_scores: &mut ResMut<HighScores>, score: 
             prev_score = current_score;
             high_scores.0[i] = score;
         }
+    }
+    if is_highscore {
+        write_high_scores(high_scores.0);
     }
     is_highscore
 }

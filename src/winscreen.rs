@@ -78,7 +78,7 @@ fn setup_winscreen(
         WinScreenEntity,
         SpriteSheetBundle {
             texture_atlas,
-            transform: Transform::from_xyz(-20.0, -5.0, 100.0),
+            transform: Transform::from_xyz(-20.0, -5.0, 110.0),
             ..Default::default()
         },
     ));
@@ -86,7 +86,7 @@ fn setup_winscreen(
     commands.spawn((
         SpriteBundle {
             texture: asset_server.load("sprites/princess.png"),
-            transform: Transform::from_xyz(20.0, -5.0, 100.0)
+            transform: Transform::from_xyz(20.0, -5.0, 110.0)
                 .with_rotation(Quat::from_rotation_y(std::f32::consts::PI)),
             ..Default::default()
         },

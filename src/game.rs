@@ -325,6 +325,7 @@ fn check_castle_collisions(
     mut game_state: ResMut<NextState<GameState>>,
     points: Res<Points>,
     mut high_scores: ResMut<HighScores>,
+    mut play_state: ResMut<NextState<PlayState>>,
 ) {
     let bob_transform = bob_query.single();
     for castle_transform in &castles_query {
@@ -338,6 +339,7 @@ fn check_castle_collisions(
         {
             check_and_update_highscores(&mut high_scores, points.0);
             game_state.set(GameState::WinScreen);
+            play_state.set(PlayState::Ready);
         }
     }
 }

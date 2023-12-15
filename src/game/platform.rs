@@ -1,4 +1,4 @@
-use super::{GameEntity, MovingObject};
+use super::{GameDynamicEntity, GameEntity, MovingObject};
 use bevy::prelude::*;
 
 const PLATFORM_ANIMATION_SPEED: f32 = 10.0;
@@ -48,6 +48,7 @@ pub(super) fn spawn_platform(
         commands.spawn((
             Platform { ..default() },
             GameEntity,
+            GameDynamicEntity,
             MovingObject {
                 width: PLATFORM_WIDTH,
                 velocity_x: PLATFORM_VELOCITY_X,

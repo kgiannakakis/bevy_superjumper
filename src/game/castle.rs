@@ -1,4 +1,4 @@
-use super::GameEntity;
+use super::{GameDynamicEntity, GameEntity};
 use bevy::prelude::*;
 
 pub const CASTLE_SIZE: Vec2 = Vec2::new(64.0, 64.0);
@@ -17,6 +17,7 @@ pub(super) fn spawn_castle(
     commands.spawn((
         Castle,
         GameEntity,
+        GameDynamicEntity,
         SpriteBundle {
             texture: castle_texture,
             transform: Transform::from_xyz(position.x, position.y, 20.0),

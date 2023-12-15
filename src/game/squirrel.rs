@@ -1,4 +1,4 @@
-use super::{GameEntity, MovingObject};
+use super::{GameDynamicEntity, GameEntity, MovingObject};
 use bevy::prelude::*;
 
 const SQUIRREL_ANIMATION_SPEED: f32 = 10.0;
@@ -31,6 +31,7 @@ pub(super) fn spawn_squirrel(
     commands.spawn((
         Squirrel,
         GameEntity,
+        GameDynamicEntity,
         MovingObject {
             width: SQUIRREL_WIDTH,
             velocity_x: SQUIRREL_VELOCITY_X,

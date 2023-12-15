@@ -16,6 +16,8 @@ use platform::Platform;
 use spring::Spring;
 use squirrel::Squirrel;
 
+use self::level::GameObject;
+
 mod bob;
 mod castle;
 mod coin;
@@ -26,6 +28,9 @@ mod squirrel;
 
 #[derive(Component)]
 struct GameEntity;
+
+#[derive(Component)]
+struct GameDynamicEntity;
 
 #[derive(Component)]
 struct MovingObject {
@@ -48,6 +53,9 @@ struct GameOverUi;
 
 #[derive(Resource, Default)]
 pub struct Points(u32);
+
+#[derive(Resource, Default)]
+pub struct GameObjects(Vec<GameObject>);
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 enum PlayState {
@@ -78,6 +86,7 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_state::<PlayState>()
             .init_resource::<Points>()
+            .init_resource::<GameObjects>()
             .add_systems(OnEnter(GameState::Playing), setup_play)
             .add_systems(
                 OnExit(GameState::Playing),
@@ -89,6 +98,7 @@ impl Plugin for GamePlugin {
                     ui_action,
                     update_buttons_visibility.run_if(state_changed::<PlayState>()),
                     click_sound.run_if(state_changed::<PlayState>()),
+                    spawn_objects,
                 )
                     .run_if(in_state(GameState::Playing)),
             )
@@ -112,6 +122,7 @@ impl Plugin for GamePlugin {
                     check_squirrel_collisions,
                     check_spring_collisions,
                     check_castle_collisions,
+                    cleanup_objects,
                 )
                     .run_if(in_state(GameState::Playing).and_then(in_state(PlayState::Running))),
             )
@@ -131,52 +142,9 @@ fn setup_play(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut game_objects: ResMut<GameObjects>,
 ) {
-    let objects = level::generate_level();
-
-    for object in &objects {
-        match object.object_type {
-            level::GameObjectType::Platform(moving) => {
-                platform::spawn_platform(
-                    &mut commands,
-                    &asset_server,
-                    &mut texture_atlases,
-                    moving,
-                    Vec2::new(object.x - 160.0, object.y - 240.0),
-                );
-            }
-            level::GameObjectType::Squirrel => {
-                squirrel::spawn_squirrel(
-                    &mut commands,
-                    &asset_server,
-                    &mut texture_atlases,
-                    Vec2::new(object.x - 160.0, object.y - 240.0),
-                );
-            }
-            level::GameObjectType::Coin => {
-                coin::spawn_coin(
-                    &mut commands,
-                    &asset_server,
-                    &mut texture_atlases,
-                    Vec2::new(object.x - 160.0, object.y - 240.0),
-                );
-            }
-            level::GameObjectType::Spring => {
-                spring::spawn_spring(
-                    &mut commands,
-                    &asset_server,
-                    Vec2::new(object.x - 160.0, object.y - 240.0),
-                );
-            }
-            level::GameObjectType::Castle => {
-                castle::spawn_castle(
-                    &mut commands,
-                    &asset_server,
-                    Vec2::new(object.x - 160.0, object.y - 240.0),
-                );
-            }
-        }
-    }
+    game_objects.0 = level::generate_level();
 
     bob::setup_bob(&mut commands, &asset_server, &mut texture_atlases);
 
@@ -281,6 +249,85 @@ fn setup_play(
                     ));
                 });
         });
+}
+
+fn spawn_objects(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut game_objects: ResMut<GameObjects>,
+    camera_query: Query<&Transform, With<Camera>>,
+) {
+    let max_y = camera_query.single().translation.y + 1.1 * 480.0;
+
+    for object in &mut game_objects.0 {
+        // Only spawn objects that are on screen and a 10% above
+        if object.is_spawned || object.y > max_y {
+            continue;
+        }
+
+        object.is_spawned = true;
+
+        match object.object_type {
+            level::GameObjectType::Platform(moving) => {
+                platform::spawn_platform(
+                    &mut commands,
+                    &asset_server,
+                    &mut texture_atlases,
+                    moving,
+                    Vec2::new(object.x - 160.0, object.y - 240.0),
+                );
+            }
+            level::GameObjectType::Squirrel => {
+                squirrel::spawn_squirrel(
+                    &mut commands,
+                    &asset_server,
+                    &mut texture_atlases,
+                    Vec2::new(object.x - 160.0, object.y - 240.0),
+                );
+            }
+            level::GameObjectType::Coin => {
+                coin::spawn_coin(
+                    &mut commands,
+                    &asset_server,
+                    &mut texture_atlases,
+                    Vec2::new(object.x - 160.0, object.y - 240.0),
+                );
+            }
+            level::GameObjectType::Spring => {
+                spring::spawn_spring(
+                    &mut commands,
+                    &asset_server,
+                    Vec2::new(object.x - 160.0, object.y - 240.0),
+                );
+            }
+            level::GameObjectType::Castle => {
+                castle::spawn_castle(
+                    &mut commands,
+                    &asset_server,
+                    Vec2::new(object.x - 160.0, object.y - 240.0),
+                );
+            }
+        }
+    }
+}
+
+fn cleanup_objects(
+    mut commands: Commands,
+    mut game_objects: ResMut<GameObjects>,
+    mut dynamic_objects: Query<(Entity, &Transform), With<GameDynamicEntity>>,
+    camera_query: Query<&Transform, With<Camera>>,
+) {
+    let min_y = camera_query.single().translation.y - 1.2 * 240.0;
+
+    game_objects.0.retain(|o| !o.is_spawned);
+
+    for (entity, transform) in &mut dynamic_objects {
+        // Despawn objects that are below screen's bottom
+        if transform.translation.y < min_y {
+            commands.entity(entity).despawn_recursive();
+        }
+    }
 }
 
 fn spawn_game_over_ui(
@@ -489,18 +536,18 @@ fn check_castle_collisions(
     mut high_scores: ResMut<HighScores>,
 ) {
     let bob_transform = bob_query.single();
-    let castle_transform = castles_query.single();
-
-    if collide(
-        bob_transform.translation,
-        bob::BOB_SIZE,
-        castle_transform.translation,
-        castle::CASTLE_SIZE,
-    )
-    .is_some()
-    {
-        check_and_update_highscores(&mut high_scores, points.0);
-        game_state.set(GameState::WinScreen);
+    for castle_transform in &castles_query {
+        if collide(
+            bob_transform.translation,
+            bob::BOB_SIZE,
+            castle_transform.translation,
+            castle::CASTLE_SIZE,
+        )
+        .is_some()
+        {
+            check_and_update_highscores(&mut high_scores, points.0);
+            game_state.set(GameState::WinScreen);
+        }
     }
 }
 

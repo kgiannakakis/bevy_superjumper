@@ -1,4 +1,4 @@
-use super::GameEntity;
+use super::{GameDynamicEntity, GameEntity};
 use bevy::prelude::*;
 
 const COIN_ANIMATION_SPEED: f32 = 10.0;
@@ -30,6 +30,7 @@ pub(super) fn spawn_coin(
     commands.spawn((
         Coin,
         GameEntity,
+        GameDynamicEntity,
         SpriteSheetBundle {
             texture_atlas,
             transform: Transform::from_xyz(position.x, position.y, 20.0),

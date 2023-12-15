@@ -1,4 +1,4 @@
-use super::GameEntity;
+use super::{GameDynamicEntity, GameEntity};
 use bevy::prelude::*;
 
 pub const SPRING_HEIGHT: f32 = 0.3 * 32.0;
@@ -18,6 +18,7 @@ pub(super) fn spawn_spring(
     commands.spawn((
         Spring,
         GameEntity,
+        GameDynamicEntity,
         SpriteBundle {
             texture: spring_texture,
             transform: Transform::from_xyz(position.x, position.y, 20.0),

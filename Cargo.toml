@@ -14,3 +14,7 @@ opt-level = 1
 # Enable high optimizations for dependencies (incl. Bevy), but not for our code:
 [profile.dev.package."*"]
 opt-level = 3
+
+# Optimize release for size
+[profile.release]
+opt-level = 'z'

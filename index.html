@@ -30,8 +30,8 @@
 </head>
 <body style="margin: 0px;">
   <script type="module">
-    import { progressiveFetch } from '/tools.js';
-    import '/restart-audio-context.js'
+    import { progressiveFetch } from './tools.js';
+    import './restart-audio-context.js'
     import init from './superjumper.js'
 
     const canvasEl = document.getElementById('bevy');
@@ -84,7 +84,7 @@
 
   <div>
     <div class="bevy-instance__progress-status" data-progress-status>
-      Progress: 100%
+      Progress: 0%
     </div>
     <canvas id="bevy" width="400" height="600"></canvas>
   </div>

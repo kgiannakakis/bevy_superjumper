@@ -919,7 +919,7 @@ function __wbg_get_imports() {
         getObject(arg0).clearTimeout(arg1);
     };
     imports.wbg.__wbg_fetch_0e963427b168327c = function(arg0, arg1, arg2) {
-        const ret = getObject(arg0).fetch(getStringFromWasm0(arg1, arg2));
+        const ret = window.bevyLoadingBarFetch(getStringFromWasm0(arg1, arg2));
         return addHeapObject(ret);
     };
     imports.wbg.__wbg_setTimeout_07866af1a1842093 = function() { return handleError(function (arg0, arg1, arg2) {
@@ -1923,7 +1923,7 @@ async function __wbg_init(input) {
     const imports = __wbg_get_imports();
 
     if (typeof input === 'string' || (typeof Request === 'function' && input instanceof Request) || (typeof URL === 'function' && input instanceof URL)) {
-        input = fetch(input);
+        input = window.bevyLoadingBarFetch(input);
     }
 
     __wbg_init_memory(imports);

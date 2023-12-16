@@ -4,4 +4,4 @@ This is a port of [libgdx superjumper](https://github.com/libgdx/libgdx-demo-sup
 
 Super Jumper is a very simple Doodle Jump clone. The source code of the original (java, libgdx) and this project (rust, bevy) could be used to compare the classic OOP-main game loop with newer Rust-ECS game engine paradigm.
 
-You can play the game (without audio) as [https://kgiannakakis.github.io/bevy_superjumper/](https://kgiannakakis.github.io/bevy_superjumper/).
+You can play the game in [https://kgiannakakis.github.io/bevy_superjumper/](https://kgiannakakis.github.io/bevy_superjumper/).

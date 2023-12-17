@@ -211,6 +211,7 @@ fn check_platform_collisions(
     audio_handles: Res<AudioHandles>,
     mut commands: Commands,
     sound_enabled: Res<SoundEnabled>,
+    time: Res<Time>,
 ) {
     let (&bob_transform, mut bob) = bob_query.single_mut();
     if bob.velocity.y > 0.0 {
@@ -232,7 +233,7 @@ fn check_platform_collisions(
 
             let mut rng = rand::thread_rng();
             if rng.gen_range(0.0..1.0) > 0.5 {
-                platform.state = platform::PlatformState::Pulverizing;
+                platform.state = platform::PlatformState::Pulverizing(time.elapsed_seconds());
             }
             return;
         }

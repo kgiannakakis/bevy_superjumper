@@ -7,11 +7,11 @@ pub const PLATFORM_WIDTH: f32 = 64.0;
 pub const PLATFORM_SIZE: Vec2 = Vec2::new(PLATFORM_WIDTH, PLATFORM_HEIGHT);
 const PLATFORM_VELOCITY_X: f32 = 60.0;
 
-#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub enum PlatformState {
     #[default]
     Normal,
-    Pulverizing,
+    Pulverizing(f32),
 }
 
 #[derive(Component, Default)]
@@ -67,8 +67,9 @@ pub(super) fn animate_platforms(
     time: Res<Time>,
 ) {
     for (entity, platform, mut platform_ta) in &mut platform_query {
-        if platform.state == PlatformState::Pulverizing {
-            let index = ((time.elapsed_seconds() * PLATFORM_ANIMATION_SPEED) as usize) % 5;
+        if let PlatformState::Pulverizing(start_time) = platform.state {
+            let index = 1
+                + (((time.elapsed_seconds() - start_time) * PLATFORM_ANIMATION_SPEED) as usize) % 5;
             if index >= 4 {
                 commands.entity(entity).despawn();
             } else {

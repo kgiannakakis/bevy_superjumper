@@ -35,6 +35,16 @@ struct AudioHandles {
     hit: Handle<AudioSource>,
 }
 
+#[derive(Event, Default)]
+enum SoundEvent {
+    #[default]
+    Click,
+    Coin,
+    Jump,
+    Highjump,
+    Hit,
+}
+
 #[derive(Resource)]
 pub struct SoundEnabled(bool);
 
@@ -61,10 +71,12 @@ fn main() {
         )
         .init_resource::<SoundEnabled>()
         .add_state::<GameState>()
+        .add_event::<SoundEvent>()
         .add_systems(Startup, (scene_setup, play_music))
+        .add_systems(Update, handle_sound_event)
         .add_plugins((
-            //bevy::diagnostic::LogDiagnosticsPlugin::default(),
-            //bevy::diagnostic::FrameTimeDiagnosticsPlugin::default(),
+            bevy::diagnostic::LogDiagnosticsPlugin::default(),
+            bevy::diagnostic::FrameTimeDiagnosticsPlugin,
             menu::MenuPlugin,
             help::HelpPlugin,
             game::GamePlugin,
@@ -123,6 +135,32 @@ fn play_music(
     }
 }
 
+fn handle_sound_event(
+    mut commands: Commands,
+    audio_handles: Res<AudioHandles>,
+    mut sound_events: EventReader<SoundEvent>,
+    sound_enabled: Res<SoundEnabled>,
+) {
+    if !sound_events.is_empty() {
+        if sound_enabled.0 {
+            for sound_event in sound_events.read() {
+                let source = match sound_event {
+                    SoundEvent::Click => audio_handles.click.clone(),
+                    SoundEvent::Coin => audio_handles.coin.clone(),
+                    SoundEvent::Jump => audio_handles.jump.clone(),
+                    SoundEvent::Highjump => audio_handles.highjump.clone(),
+                    SoundEvent::Hit => audio_handles.hit.clone(),
+                };
+                commands.spawn(AudioBundle {
+                    source,
+                    ..default()
+                });
+            }
+        }
+        sound_events.clear();
+    }
+}
+
 fn click_sound(
     audio_handles: Res<AudioHandles>,
     mut commands: Commands,
@@ -131,19 +169,6 @@ fn click_sound(
     if sound_enabled.0 {
         commands.spawn(AudioBundle {
             source: audio_handles.click.clone(),
-            ..default()
-        });
-    }
-}
-
-fn play_sound(
-    source: Handle<AudioSource>,
-    commands: &mut Commands,
-    sound_enabled: &Res<SoundEnabled>,
-) {
-    if sound_enabled.0 {
-        commands.spawn(AudioBundle {
-            source,
             ..default()
         });
     }

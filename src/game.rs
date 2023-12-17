@@ -5,7 +5,7 @@ use crate::{
     cleanup, click_sound,
     help::has_user_input,
     highscores::{check_and_update_highscores, HighScores},
-    play_sound, AudioHandles, Background, GameState, SoundEnabled,
+    Background, GameState, SoundEvent,
 };
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 
@@ -208,9 +208,7 @@ fn cleanup_objects(
 fn check_platform_collisions(
     mut bob_query: Query<(&Transform, &mut Bob), With<Bob>>,
     mut platforms_query: Query<(&Transform, &mut Platform), With<Platform>>,
-    audio_handles: Res<AudioHandles>,
-    mut commands: Commands,
-    sound_enabled: Res<SoundEnabled>,
+    mut sound_events: EventWriter<SoundEvent>,
     time: Res<Time>,
 ) {
     let (&bob_transform, mut bob) = bob_query.single_mut();
@@ -229,7 +227,7 @@ fn check_platform_collisions(
         {
             bob.velocity.y = bob::BOB_JUMP_VELOCITY;
 
-            play_sound(audio_handles.jump.clone(), &mut commands, &sound_enabled);
+            sound_events.send(SoundEvent::Jump);
 
             let mut rng = rand::thread_rng();
             if rng.gen_range(0.0..1.0) > 0.5 {
@@ -243,9 +241,7 @@ fn check_platform_collisions(
 fn check_spring_collisions(
     mut bob_query: Query<(&Transform, &mut Bob), With<Bob>>,
     springs_query: Query<&Transform, With<Spring>>,
-    audio_handles: Res<AudioHandles>,
-    mut commands: Commands,
-    sound_enabled: Res<SoundEnabled>,
+    mut sound_events: EventWriter<SoundEvent>,
 ) {
     let (&bob_transform, mut bob) = bob_query.single_mut();
 
@@ -263,11 +259,7 @@ fn check_spring_collisions(
         .is_some()
         {
             bob.velocity.y = bob::BOB_JUMP_VELOCITY * 1.5;
-            play_sound(
-                audio_handles.highjump.clone(),
-                &mut commands,
-                &sound_enabled,
-            );
+            sound_events.send(SoundEvent::Highjump);
             return;
         }
     }
@@ -298,9 +290,7 @@ fn check_coin_collisions(
 fn check_squirrel_collisions(
     bob_query: Query<&Transform, With<Bob>>,
     mut squirrels_query: Query<&Transform, With<Squirrel>>,
-    audio_handles: Res<AudioHandles>,
-    mut commands: Commands,
-    sound_enabled: Res<SoundEnabled>,
+    mut sound_events: EventWriter<SoundEvent>,
     mut play_state: ResMut<NextState<PlayState>>,
 ) {
     let bob_transform = bob_query.single();
@@ -313,7 +303,7 @@ fn check_squirrel_collisions(
         )
         .is_some()
         {
-            play_sound(audio_handles.hit.clone(), &mut commands, &sound_enabled);
+            sound_events.send(SoundEvent::Hit);
             play_state.set(PlayState::GameOver);
             return;
         }
@@ -360,17 +350,8 @@ fn move_objects(
     }
 }
 
-fn coin_sound(
-    audio_handles: Res<AudioHandles>,
-    mut commands: Commands,
-    sound_enabled: Res<SoundEnabled>,
-) {
-    if sound_enabled.0 {
-        commands.spawn(AudioBundle {
-            source: audio_handles.coin.clone(),
-            ..default()
-        });
-    }
+fn coin_sound(mut sound_events: EventWriter<SoundEvent>) {
+    sound_events.send(SoundEvent::Coin);
 }
 
 fn reset_play(

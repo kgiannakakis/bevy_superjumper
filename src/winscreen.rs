@@ -40,8 +40,8 @@ impl Plugin for WinScreenPlugin {
                     show_next_screen
                         .run_if(in_state(GameState::WinScreen).and_then(has_user_input)),
                     click_sound.run_if(
-                        resource_changed::<WinScreenIndex>()
-                            .and_then(not(resource_added::<WinScreenIndex>())),
+                        resource_changed::<WinScreenIndex>
+                            .and_then(not(resource_added::<WinScreenIndex>)),
                     ),
                 ),
             );
@@ -51,7 +51,7 @@ impl Plugin for WinScreenPlugin {
 fn setup_winscreen(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     commands.spawn((
         SpriteBundle {
@@ -64,8 +64,7 @@ fn setup_winscreen(
 
     // Load the bob's sprite sheet and create a texture atlas from it
     let bob_texture = asset_server.load("sprites/bob.png");
-    let texture_atlas = texture_atlases.add(TextureAtlas::from_grid(
-        bob_texture,
+    let layout_handle = texture_atlases.add(TextureAtlasLayout::from_grid(
         Vec2::new(32.0, 32.0),
         5,
         1,
@@ -77,7 +76,11 @@ fn setup_winscreen(
     commands.spawn((
         WinScreenEntity,
         SpriteSheetBundle {
-            texture_atlas,
+            atlas: TextureAtlas {
+                layout: layout_handle,
+                index: 0,
+            },
+            texture: bob_texture,
             transform: Transform::from_xyz(-20.0, -5.0, 110.0),
             ..Default::default()
         },
@@ -120,7 +123,7 @@ fn setup_winscreen(
                             color: Color::WHITE,
                         },
                     )],
-                    alignment: TextAlignment::Center,
+                    justify: JustifyText::Center,
                     linebreak_behavior: BreakLineOn::WordBoundary,
                 },
                 text_2d_bounds: Text2dBounds {
@@ -163,8 +166,8 @@ fn show_next_screen(
 }
 
 pub fn has_user_input(
-    keyboard_input: Res<Input<KeyCode>>,
-    mouse_button_input: Res<Input<MouseButton>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mouse_button_input: Res<ButtonInput<MouseButton>>,
     touch_input: Res<Touches>,
 ) -> bool {
     keyboard_input.just_pressed(KeyCode::Space)

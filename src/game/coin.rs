@@ -12,13 +12,12 @@ pub struct Coin;
 pub(super) fn spawn_coin(
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
-    texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
+    texture_atlases: &mut ResMut<Assets<TextureAtlasLayout>>,
     position: Vec2,
 ) {
     // Load the coin's sprite sheet and create a texture atlas from it
     let coin_texture = asset_server.load("sprites/coin.png");
-    let texture_atlas = texture_atlases.add(TextureAtlas::from_grid(
-        coin_texture,
+    let layout_handle = texture_atlases.add(TextureAtlasLayout::from_grid(
         Vec2::new(32.0, 32.0),
         3,
         1,
@@ -32,17 +31,18 @@ pub(super) fn spawn_coin(
         GameEntity,
         GameDynamicEntity,
         SpriteSheetBundle {
-            texture_atlas,
+            texture: coin_texture,
+            atlas: TextureAtlas {
+                layout: layout_handle,
+                index: 0,
+            },
             transform: Transform::from_xyz(position.x, position.y, 20.0),
             ..Default::default()
         },
     ));
 }
 
-pub(super) fn animate_coins(
-    mut coins: Query<&mut TextureAtlasSprite, With<Coin>>,
-    time: Res<Time>,
-) {
+pub(super) fn animate_coins(mut coins: Query<&mut TextureAtlas, With<Coin>>, time: Res<Time>) {
     for mut coin in &mut coins {
         coin.index = (time.elapsed_seconds() * COIN_ANIMATION_SPEED) as usize % 3;
     }

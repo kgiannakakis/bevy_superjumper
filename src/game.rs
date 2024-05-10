@@ -7,7 +7,10 @@ use crate::{
     highscores::{check_and_update_highscores, HighScores},
     Background, GameState, SoundEvent,
 };
-use bevy::{prelude::*, sprite::collide_aabb::collide};
+use bevy::{
+    math::bounding::{Aabb2d, IntersectsVolume},
+    prelude::*,
+};
 
 use bob::Bob;
 use castle::Castle;
@@ -58,7 +61,7 @@ enum PlayState {
 pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_state::<PlayState>()
+        app.init_state::<PlayState>()
             .init_resource::<Points>()
             .init_resource::<GameObjects>()
             .add_systems(OnEnter(GameState::Playing), (setup_play, game_ui::setup_ui))
@@ -70,8 +73,8 @@ impl Plugin for GamePlugin {
                 Update,
                 (
                     game_ui::ui_action,
-                    game_ui::update_buttons_visibility.run_if(state_changed::<PlayState>()),
-                    click_sound.run_if(state_changed::<PlayState>()),
+                    game_ui::update_buttons_visibility.run_if(state_changed::<PlayState>),
+                    click_sound.run_if(state_changed::<PlayState>),
                     spawn_objects,
                 )
                     .run_if(in_state(GameState::Playing)),
@@ -79,10 +82,9 @@ impl Plugin for GamePlugin {
             .add_systems(
                 Update,
                 (
-                    coin_sound.run_if(
-                        resource_changed::<Points>().and_then(not(resource_added::<Points>())),
-                    ),
-                    game_ui::update_score_text.run_if(resource_changed::<Points>()),
+                    coin_sound
+                        .run_if(resource_changed::<Points>.and_then(not(resource_added::<Points>))),
+                    game_ui::update_score_text.run_if(resource_changed::<Points>),
                     bob::animate_bob,
                     bob::update_bob,
                     bob::move_bob,
@@ -118,7 +120,7 @@ impl Plugin for GamePlugin {
 fn setup_play(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     mut game_objects: ResMut<GameObjects>,
 ) {
     game_objects.0 = level::generate_level();
@@ -129,7 +131,7 @@ fn setup_play(
 fn spawn_objects(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     mut game_objects: ResMut<GameObjects>,
     camera_query: Query<&Transform, With<Camera>>,
 ) {
@@ -217,14 +219,13 @@ fn check_platform_collisions(
     }
 
     for (&platform_transform, mut platform) in &mut platforms_query {
-        if collide(
-            bob_transform.translation,
-            bob::BOB_SIZE,
-            platform_transform.translation,
-            platform::PLATFORM_SIZE,
-        )
-        .is_some()
-        {
+        let collision = Aabb2d::new(bob_transform.translation.truncate(), bob::BOB_SIZE / 2.)
+            .intersects(&Aabb2d::new(
+                platform_transform.translation.truncate(),
+                platform::PLATFORM_SIZE / 2.,
+            ));
+
+        if collision {
             bob.velocity.y = bob::BOB_JUMP_VELOCITY;
 
             sound_events.send(SoundEvent::Jump);
@@ -250,14 +251,12 @@ fn check_spring_collisions(
     }
 
     for &spring_transform in &springs_query {
-        if collide(
-            bob_transform.translation,
-            bob::BOB_SIZE,
-            spring_transform.translation,
-            spring::SPRING_SIZE,
-        )
-        .is_some()
-        {
+        let collision =
+            Aabb2d::new(bob_transform.translation.truncate(), bob::BOB_SIZE / 2.).intersects(
+                &Aabb2d::new(spring_transform.translation.truncate(), spring::SPRING_SIZE / 2.),
+            );
+
+        if collision {
             bob.velocity.y = bob::BOB_JUMP_VELOCITY * 1.5;
             sound_events.send(SoundEvent::Highjump);
             return;
@@ -273,14 +272,12 @@ fn check_coin_collisions(
 ) {
     let bob_transform = bob_query.single();
     for (entity, &coin_transform) in &mut coins_query {
-        if collide(
-            bob_transform.translation,
-            bob::BOB_SIZE,
-            coin_transform.translation,
-            coin::COIN_SIZE,
-        )
-        .is_some()
-        {
+        let collision =
+            Aabb2d::new(bob_transform.translation.truncate(), bob::BOB_SIZE / 2.).intersects(
+                &Aabb2d::new(coin_transform.translation.truncate(), coin::COIN_SIZE / 2.),
+            );
+
+        if collision {
             points.0 += coin::COIN_SCORE;
             commands.entity(entity).despawn_recursive();
         }
@@ -295,14 +292,13 @@ fn check_squirrel_collisions(
 ) {
     let bob_transform = bob_query.single();
     for &squirrel_transform in &mut squirrels_query {
-        if collide(
-            bob_transform.translation,
-            bob::BOB_SIZE,
-            squirrel_transform.translation,
-            squirrel::SQUIRREL_SIZE,
-        )
-        .is_some()
-        {
+        let collision = Aabb2d::new(bob_transform.translation.truncate(), bob::BOB_SIZE / 2.)
+            .intersects(&Aabb2d::new(
+                squirrel_transform.translation.truncate(),
+                squirrel::SQUIRREL_SIZE / 2.,
+            ));
+
+        if collision {
             sound_events.send(SoundEvent::Hit);
             play_state.set(PlayState::GameOver);
             return;
@@ -320,14 +316,12 @@ fn check_castle_collisions(
 ) {
     let bob_transform = bob_query.single();
     for castle_transform in &castles_query {
-        if collide(
-            bob_transform.translation,
-            bob::BOB_SIZE,
-            castle_transform.translation,
-            castle::CASTLE_SIZE,
-        )
-        .is_some()
-        {
+        let collision =
+            Aabb2d::new(bob_transform.translation.truncate(), bob::BOB_SIZE / 2.).intersects(
+                &Aabb2d::new(castle_transform.translation.truncate(), castle::CASTLE_SIZE / 2.),
+            );
+
+        if collision {
             check_and_update_highscores(&mut high_scores, points.0);
             game_state.set(GameState::WinScreen);
             play_state.set(PlayState::Ready);

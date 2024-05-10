@@ -18,8 +18,8 @@ impl Plugin for HelpPlugin {
                 (
                     show_next_screen.run_if(in_state(GameState::Help).and_then(has_user_input)),
                     click_sound.run_if(
-                        resource_changed::<HelpScreenIndex>()
-                            .and_then(not(resource_added::<HelpScreenIndex>())),
+                        resource_changed::<HelpScreenIndex>
+                            .and_then(not(resource_added::<HelpScreenIndex>)),
                     ),
                 ),
             );
@@ -60,8 +60,8 @@ fn show_next_screen(
 }
 
 pub fn has_user_input(
-    keyboard_input: Res<Input<KeyCode>>,
-    mouse_button_input: Res<Input<MouseButton>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mouse_button_input: Res<ButtonInput<MouseButton>>,
     touch_input: Res<Touches>,
 ) -> bool {
     keyboard_input.just_pressed(KeyCode::Space)

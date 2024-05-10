@@ -39,8 +39,8 @@ impl Plugin for MenuPlugin {
                 (
                     menu_action,
                     click_sound.run_if(
-                        resource_changed::<SoundEnabled>()
-                            .and_then(not(resource_added::<SoundEnabled>())),
+                        resource_changed::<SoundEnabled>
+                            .and_then(not(resource_added::<SoundEnabled>)),
                     ),
                 )
                     .run_if(in_state(GameState::Menu)),
@@ -104,7 +104,7 @@ fn setup_menu(
                                     color: Color::WHITE,
                                 },
                             )
-                            .with_text_alignment(TextAlignment::Center),
+                            .with_text_justify(JustifyText::Center),
                         );
                     });
             }
@@ -166,8 +166,7 @@ fn menu_action(
                         commands.spawn((
                             AudioBundle {
                                 source: asset_server.load("audio/music.ogg"),
-                                settings: PlaybackSettings::LOOP
-                                    .with_volume(Volume::new_relative(0.1)),
+                                settings: PlaybackSettings::LOOP.with_volume(Volume::new(0.1)),
                             },
                             GameMusic,
                         ));

@@ -22,14 +22,13 @@ pub struct Platform {
 pub(super) fn spawn_platform(
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
-    texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
+    texture_atlases: &mut ResMut<Assets<TextureAtlasLayout>>,
     moving: bool,
     position: Vec2,
 ) {
     // Load the platform's sprite sheet and create a texture atlas from it
     let platform_texture = asset_server.load("sprites/platform.png");
-    let texture_atlas = texture_atlases.add(TextureAtlas::from_grid(
-        platform_texture,
+    let layout_handle = texture_atlases.add(TextureAtlasLayout::from_grid(
         Vec2::new(64.0, 16.0),
         1,
         4,
@@ -39,7 +38,11 @@ pub(super) fn spawn_platform(
 
     // Spawn platform
     let sprite_bundle = SpriteSheetBundle {
-        texture_atlas,
+        texture: platform_texture,
+        atlas: TextureAtlas {
+            layout: layout_handle,
+            index: 0,
+        },
         transform: Transform::from_xyz(position.x, position.y, 20.0),
         ..Default::default()
     };
@@ -63,7 +66,7 @@ pub(super) fn spawn_platform(
 
 pub(super) fn animate_platforms(
     mut commands: Commands,
-    mut platform_query: Query<(Entity, &Platform, &mut TextureAtlasSprite), With<Platform>>,
+    mut platform_query: Query<(Entity, &Platform, &mut TextureAtlas), With<Platform>>,
     time: Res<Time>,
 ) {
     for (entity, platform, mut platform_ta) in &mut platform_query {

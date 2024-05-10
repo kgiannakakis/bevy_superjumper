@@ -17,12 +17,11 @@ pub struct Bob {
 pub(super) fn setup_bob(
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
-    texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
+    texture_atlases: &mut ResMut<Assets<TextureAtlasLayout>>,
 ) {
     // Load the bob's sprite sheet and create a texture atlas from it
     let bob_texture = asset_server.load("sprites/bob.png");
-    let texture_atlas = texture_atlases.add(TextureAtlas::from_grid(
-        bob_texture,
+    let layout_handle = texture_atlases.add(TextureAtlasLayout::from_grid(
         Vec2::new(32.0, 32.0),
         5,
         1,
@@ -35,7 +34,11 @@ pub(super) fn setup_bob(
         Bob::default(),
         GameEntity,
         SpriteSheetBundle {
-            texture_atlas,
+            texture: bob_texture,
+            atlas: TextureAtlas {
+                layout: layout_handle,
+                index: 0,
+            },
             transform: Transform::from_xyz(0.0, -240.0 + 32.0, 20.0),
             ..Default::default()
         },
@@ -43,7 +46,7 @@ pub(super) fn setup_bob(
 }
 
 pub(super) fn animate_bob(
-    mut bob_query: Query<(&mut TextureAtlasSprite, &mut Transform, &Bob), With<Bob>>,
+    mut bob_query: Query<(&mut TextureAtlas, &mut Transform, &Bob), With<Bob>>,
     time: Res<Time>,
 ) {
     let (mut bob_ta, mut transform, bob) = bob_query.single_mut();
@@ -97,11 +100,16 @@ pub(super) fn update_bob(
     }
 }
 
-pub(super) fn move_bob(mut bob: Query<&mut Bob, With<Bob>>, keyboard_input: Res<Input<KeyCode>>) {
+pub(super) fn move_bob(
+    mut bob: Query<&mut Bob, With<Bob>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+) {
     for mut bob in &mut bob {
-        if keyboard_input.pressed(KeyCode::Right) || keyboard_input.pressed(KeyCode::D) {
+        if keyboard_input.pressed(KeyCode::ArrowRight) || keyboard_input.pressed(KeyCode::KeyD) {
             bob.velocity.x = ACCELERATION_X * BOB_MOVE_VELOCITY;
-        } else if keyboard_input.pressed(KeyCode::Left) || keyboard_input.pressed(KeyCode::A) {
+        } else if keyboard_input.pressed(KeyCode::ArrowLeft)
+            || keyboard_input.pressed(KeyCode::KeyA)
+        {
             bob.velocity.x = -ACCELERATION_X * BOB_MOVE_VELOCITY;
         } else {
             bob.velocity.x = 0.0;
@@ -109,7 +117,7 @@ pub(super) fn move_bob(mut bob: Query<&mut Bob, With<Bob>>, keyboard_input: Res<
     }
 }
 
-pub(super) fn animate_bob_death(mut bob_query: Query<&mut TextureAtlasSprite, With<Bob>>) {
+pub(super) fn animate_bob_death(mut bob_query: Query<&mut TextureAtlas, With<Bob>>) {
     let mut bob_ta = bob_query.single_mut();
     bob_ta.index = 4;
 }

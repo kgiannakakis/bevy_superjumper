@@ -78,7 +78,7 @@ pub(super) fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                                     color: Color::WHITE,
                                 },
                             )
-                            .with_text_alignment(TextAlignment::Center),
+                            .with_text_justify(JustifyText::Center),
                         );
                     });
             }
@@ -131,7 +131,7 @@ pub(super) fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                                 color: Color::WHITE,
                             },
                         )
-                        .with_text_alignment(TextAlignment::Left),
+                        .with_text_justify(JustifyText::Left),
                         ScoreUi,
                     ));
                 });
@@ -194,7 +194,7 @@ pub(super) fn spawn_game_over_ui(
                                 color: Color::WHITE,
                             },
                         )
-                        .with_text_alignment(TextAlignment::Left),
+                        .with_text_justify(JustifyText::Left),
                         ScoreUi,
                     ));
                 });
@@ -217,7 +217,7 @@ pub(super) fn spawn_game_over_ui(
                             color: Color::WHITE,
                         },
                     )
-                    .with_text_alignment(TextAlignment::Left),));
+                    .with_text_justify(JustifyText::Left),));
                 });
         });
 }

@@ -13,13 +13,12 @@ pub struct Squirrel;
 pub(super) fn spawn_squirrel(
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
-    texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
+    texture_atlases: &mut ResMut<Assets<TextureAtlasLayout>>,
     position: Vec2,
 ) {
     // Load the squirrel's sprite sheet and create a texture atlas from it
     let squirrel_texture = asset_server.load("sprites/squirrel.png");
-    let texture_atlas = texture_atlases.add(TextureAtlas::from_grid(
-        squirrel_texture,
+    let layout_handle = texture_atlases.add(TextureAtlasLayout::from_grid(
         Vec2::new(32.0, 32.0),
         2,
         1,
@@ -38,7 +37,11 @@ pub(super) fn spawn_squirrel(
             dir: 1.0,
         },
         SpriteSheetBundle {
-            texture_atlas,
+            texture: squirrel_texture,
+            atlas: TextureAtlas {
+                layout: layout_handle,
+                index: 0,
+            },
             transform: Transform::from_xyz(position.x, position.y, 20.0),
             ..Default::default()
         },
@@ -46,7 +49,7 @@ pub(super) fn spawn_squirrel(
 }
 
 pub(super) fn animate_squirrels(
-    mut squirrels: Query<(&mut TextureAtlasSprite, &mut Transform, &MovingObject), With<Squirrel>>,
+    mut squirrels: Query<(&mut TextureAtlas, &mut Transform, &MovingObject), With<Squirrel>>,
     time: Res<Time>,
 ) {
     for (mut squirrel_ta, mut transform, squirrel) in &mut squirrels {

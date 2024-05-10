@@ -70,7 +70,7 @@ fn main() {
                 .set(ImagePlugin::default_nearest()),
         )
         .init_resource::<SoundEnabled>()
-        .add_state::<GameState>()
+        .init_state::<GameState>()
         .add_event::<SoundEvent>()
         .add_systems(Startup, (scene_setup, play_music))
         .add_systems(Update, handle_sound_event)
@@ -128,7 +128,7 @@ fn play_music(
         commands.spawn((
             AudioBundle {
                 source: asset_server.load("audio/music.ogg"),
-                settings: PlaybackSettings::LOOP.with_volume(Volume::new_relative(0.1)),
+                settings: PlaybackSettings::LOOP.with_volume(Volume::new(0.1)),
             },
             GameMusic,
         ));

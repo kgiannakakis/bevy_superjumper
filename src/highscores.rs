@@ -1,7 +1,6 @@
 use crate::{
-    cleanup, click_sound,
-    settings::{read_settings, write_high_scores, HIGHSCORE_COUNT},
-    GameState,
+    GameState, cleanup, click_sound,
+    settings::{HIGHSCORE_COUNT, read_settings, write_high_scores},
 };
 use bevy::prelude::*;
 
@@ -17,12 +16,7 @@ impl Default for HighScores {
     }
 }
 
-const TRANSPARENT: Color = Color::Rgba {
-    red: 0.0,
-    green: 0.0,
-    blue: 0.0,
-    alpha: 0.0,
-};
+const TRANSPARENT: Color = Color::linear_rgba(0.0, 0.0, 0.0, 0.0);
 
 pub struct HighScoresPlugin;
 impl Plugin for HighScoresPlugin {
@@ -44,74 +38,97 @@ fn setup_highscores(
 ) {
     commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    flex_direction: FlexDirection::Column,
-                    ..default()
-                },
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
                 ..default()
             },
             HighScoresEntity,
         ))
         .with_children(|parent| {
             parent.spawn(
-                TextBundle::from_section(
-                    "HIGHSCORES",
-                    TextStyle {
+                (
+                    Text::new("HIGHSCORES"),
+                    TextFont {
                         font: asset_server.load("fonts/Retroville NC.ttf"),
                         font_size: 40.0,
-                        color: Color::WHITE,
+                        ..default()
                     },
-                )
-                .with_text_justify(JustifyText::Center),
+                    TextColor(Color::WHITE),
+                ), // TextBundle::from_section(
+                   //     "HIGHSCORES",
+                   //     TextStyle {
+                   //         font: asset_server.load("fonts/Retroville NC.ttf"),
+                   //         font_size: 40.0,
+                   //         color: Color::WHITE,
+                   //     },
+                   // )
+                   // .with_text_justify(JustifyText::Center),
             );
 
             parent
-                .spawn(NodeBundle {
-                    style: Style {
-                        flex_direction: FlexDirection::Column,
-                        align_items: AlignItems::FlexStart,
-                        ..default()
-                    },
+                .spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::FlexStart,
                     ..default()
                 })
                 .with_children(|parent| {
                     for (i, score) in high_scores.0.into_iter().enumerate() {
                         parent.spawn(
-                            TextBundle::from_section(
-                                format!("{}. {}", i + 1, score),
-                                TextStyle {
+                            (
+                                Text::new(format!("{}. {}", i + 1, score)),
+                                TextFont {
                                     font: asset_server.load("fonts/Retroville NC.ttf"),
                                     font_size: 30.0,
-                                    color: Color::WHITE,
+                                    ..default()
                                 },
-                            )
-                            .with_text_justify(JustifyText::Left),
+                                TextColor(Color::WHITE),
+                            ), // TextBundle::from_section(
+                               //     format!("{}. {}", i + 1, score),
+                               //     TextStyle {
+                               //         font: asset_server.load("fonts/Retroville NC.ttf"),
+                               //         font_size: 30.0,
+                               //         color: Color::WHITE,
+                               //     },
+                               // )
+                               // .with_text_justify(JustifyText::Left),
                         );
                     }
                 });
 
             parent
-                .spawn(ButtonBundle {
-                    style: Style {
-                        position_type: PositionType::Absolute,
-                        left: Val::Px(10.0),
-                        bottom: Val::Px(10.0),
-                        ..default()
-                    },
-                    background_color: TRANSPARENT.into(),
-                    ..default()
-                })
+                .spawn(
+                    (
+                        Button,
+                        Node {
+                            position_type: PositionType::Absolute,
+                            left: Val::Px(10.0),
+                            bottom: Val::Px(10.0),
+                            ..default()
+                        },
+                        BackgroundColor(TRANSPARENT),
+                    ), //     ButtonBundle {
+                       //     style: Style {
+                       //         position_type: PositionType::Absolute,
+                       //         left: Val::Px(10.0),
+                       //         bottom: Val::Px(10.0),
+                       //         ..default()
+                       //     },
+                       //     background_color: TRANSPARENT.into(),
+                       //     ..default()
+                       // }
+                )
                 .with_children(|parent| {
                     let icon = asset_server.load("sprites/back.png");
-                    parent.spawn(ImageBundle {
-                        image: UiImage::new(icon),
-                        ..default()
-                    });
+                    parent.spawn(
+                        (ImageNode::new(icon),), //     ImageBundle {
+                                                 //     image: UiImage::new(icon),
+                                                 //     ..default()
+                                                 // }
+                    );
                 });
         });
 }

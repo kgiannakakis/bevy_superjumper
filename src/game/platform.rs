@@ -1,3 +1,5 @@
+use crate::game::anim::{AnimationIndices, AnimationTimer};
+
 use super::{GameDynamicEntity, GameEntity, MovingObject};
 use bevy::prelude::*;
 
@@ -29,23 +31,30 @@ pub(super) fn spawn_platform(
     // Load the platform's sprite sheet and create a texture atlas from it
     let platform_texture = asset_server.load("sprites/platform.png");
     let layout_handle = texture_atlases.add(TextureAtlasLayout::from_grid(
-        Vec2::new(64.0, 16.0),
+        UVec2::new(64, 16),
         1,
         4,
         None,
         None,
     ));
 
-    // Spawn platform
-    let sprite_bundle = SpriteSheetBundle {
-        texture: platform_texture,
-        atlas: TextureAtlas {
-            layout: layout_handle,
-            index: 0,
-        },
-        transform: Transform::from_xyz(position.x, position.y, 20.0),
-        ..Default::default()
+    let animation_indices = AnimationIndices {
+        first: 0,
+        last: 4,
+        ..default()
     };
+
+    // Spawn platform
+    let sprite_bundle = (
+        Sprite::from_atlas_image(
+            platform_texture,
+            TextureAtlas {
+                layout: layout_handle,
+                index: 0,
+            },
+        ),
+        Transform::from_xyz(position.x, position.y, 20.0),
+    );
 
     if moving {
         commands.spawn((
@@ -58,6 +67,8 @@ pub(super) fn spawn_platform(
                 dir: 1.0,
             },
             sprite_bundle,
+            animation_indices,
+            AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
         ));
     } else {
         commands.spawn((Platform { ..default() }, GameEntity, sprite_bundle));
@@ -66,17 +77,17 @@ pub(super) fn spawn_platform(
 
 pub(super) fn animate_platforms(
     mut commands: Commands,
-    mut platform_query: Query<(Entity, &Platform, &mut TextureAtlas), With<Platform>>,
+    mut platform_query: Query<(Entity, &Platform), With<Platform>>,
     time: Res<Time>,
 ) {
-    for (entity, platform, mut platform_ta) in &mut platform_query {
+    for (entity, platform) in &mut platform_query {
         if let PlatformState::Pulverizing(start_time) = platform.state {
-            let index = 1
-                + (((time.elapsed_seconds() - start_time) * PLATFORM_ANIMATION_SPEED) as usize) % 5;
+            let index =
+                1 + (((time.elapsed_secs() - start_time) * PLATFORM_ANIMATION_SPEED) as usize) % 5;
             if index >= 4 {
                 commands.entity(entity).despawn();
             } else {
-                platform_ta.index = index;
+                //platform_ta.index = index;
             }
         }
     }

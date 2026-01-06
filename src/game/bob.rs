@@ -1,8 +1,11 @@
 use super::{GameEntity, PlayState};
-use crate::Background;
+use crate::{
+    Background,
+    game::anim::{AnimationIndices, AnimationTimer},
+};
 use bevy::prelude::*;
 
-const BOB_ANIMATION_SPEED: f32 = 10.0;
+//const BOB_ANIMATION_SPEED: f32 = 10.0;
 pub const BOB_JUMP_VELOCITY: f32 = 400.0; // 11
 const BOB_MOVE_VELOCITY: f32 = 500.0; // 20
 const ACCELERATION_X: f32 = 0.5;
@@ -22,40 +25,67 @@ pub(super) fn setup_bob(
     // Load the bob's sprite sheet and create a texture atlas from it
     let bob_texture = asset_server.load("sprites/bob.png");
     let layout_handle = texture_atlases.add(TextureAtlasLayout::from_grid(
-        Vec2::new(32.0, 32.0),
+        UVec2::new(32, 32),
         5,
         1,
         None,
         None,
     ));
 
+    let animation_indices = AnimationIndices {
+        first: 0,
+        last: 3,
+        death: 4,
+    };
+
     // Spawn bob
     commands.spawn((
         Bob::default(),
         GameEntity,
-        SpriteSheetBundle {
-            texture: bob_texture,
-            atlas: TextureAtlas {
+        Sprite::from_atlas_image(
+            bob_texture,
+            TextureAtlas {
                 layout: layout_handle,
-                index: 0,
+                index: animation_indices.first,
             },
-            transform: Transform::from_xyz(0.0, -240.0 + 32.0, 20.0),
-            ..Default::default()
-        },
+        ),
+        Transform::from_xyz(0.0, -240.0 + 32.0, 20.0),
+        animation_indices,
+        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
     ));
 }
 
 pub(super) fn animate_bob(
-    mut bob_query: Query<(&mut TextureAtlas, &mut Transform, &Bob), With<Bob>>,
+    mut bob_query: Query<
+        (
+            &AnimationIndices,
+            &mut AnimationTimer,
+            &mut Transform,
+            &mut Sprite,
+            &Bob,
+        ),
+        With<Bob>,
+    >,
     time: Res<Time>,
 ) {
-    let (mut bob_ta, mut transform, bob) = bob_query.single_mut();
-    bob_ta.index = 2 + ((time.elapsed_seconds() * BOB_ANIMATION_SPEED) as usize % 2);
+    for (indices, mut timer, mut transform, mut sprite, bob) in &mut bob_query {
+        timer.tick(time.delta());
 
-    if bob.velocity.x < 0.0 {
-        transform.rotation = Quat::from_rotation_y(std::f32::consts::PI);
-    } else {
-        transform.rotation = Quat::default();
+        if timer.just_finished()
+            && let Some(atlas) = &mut sprite.texture_atlas
+        {
+            atlas.index = if atlas.index == indices.last {
+                indices.first
+            } else {
+                atlas.index + 1
+            };
+        }
+
+        if bob.velocity.x < 0.0 {
+            transform.rotation = Quat::from_rotation_y(std::f32::consts::PI);
+        } else {
+            transform.rotation = Quat::default();
+        }
     }
 }
 
@@ -66,21 +96,21 @@ pub(super) fn update_bob(
     play_state: Res<State<PlayState>>,
     time: Res<Time>,
 ) {
-    let (mut transform, mut bob) = bob_query.single_mut();
-    let mut camera = camera_query.single_mut();
+    let (mut transform, mut bob) = bob_query.single_mut().unwrap();
+    let mut camera = camera_query.single_mut().unwrap();
 
-    bob.velocity.y += GRAVITY_Y * time.delta_seconds();
+    bob.velocity.y += GRAVITY_Y * time.delta_secs();
 
     if *play_state == PlayState::GameOver {
         if bob.velocity.y >= 0.0 {
             bob.velocity.y = 0.0;
         }
         if transform.translation.y > camera.translation.y - 240.0 {
-            transform.translation.y += bob.velocity.y * time.delta_seconds();
+            transform.translation.y += bob.velocity.y * time.delta_secs();
         }
     } else {
-        transform.translation.x += bob.velocity.x * time.delta_seconds();
-        transform.translation.y += bob.velocity.y * time.delta_seconds();
+        transform.translation.x += bob.velocity.x * time.delta_secs();
+        transform.translation.y += bob.velocity.y * time.delta_secs();
 
         if transform.translation.y < -240.0 + 16.0 {
             bob.velocity.y = BOB_JUMP_VELOCITY;
@@ -95,7 +125,7 @@ pub(super) fn update_bob(
 
         if transform.translation.y > camera.translation.y {
             camera.translation.y = transform.translation.y;
-            bg_query.single_mut().translation.y = transform.translation.y;
+            bg_query.single_mut().unwrap().translation.y = transform.translation.y;
         }
     }
 }
@@ -117,9 +147,12 @@ pub(super) fn move_bob(
     }
 }
 
-pub(super) fn animate_bob_death(mut bob_query: Query<&mut TextureAtlas, With<Bob>>) {
-    let mut bob_ta = bob_query.single_mut();
-    bob_ta.index = 4;
+pub(super) fn animate_bob_death(mut bob_query: Query<(&AnimationIndices, &mut Sprite), With<Bob>>) {
+    for (indices, mut sprite) in &mut bob_query {
+        if let Some(atlas) = &mut sprite.texture_atlas {
+            atlas.index = indices.death;
+        }
+    }
 }
 
 pub(super) fn check_bob_has_fallen(
@@ -128,9 +161,11 @@ pub(super) fn check_bob_has_fallen(
     mut play_state: ResMut<NextState<PlayState>>,
 ) {
     let bob_transform = bob_query.single();
-    let camera = camera_query.single();
+    let camera = camera_query.single().unwrap();
 
-    if bob_transform.translation.y <= camera.translation.y - 240.0 && camera.translation.y > 0.0 {
+    if bob_transform.unwrap().translation.y <= camera.translation.y - 240.0
+        && camera.translation.y > 0.0
+    {
         play_state.set(PlayState::GameOver);
     }
 }

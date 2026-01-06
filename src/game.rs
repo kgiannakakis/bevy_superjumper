@@ -2,10 +2,9 @@
 use rand::Rng;
 
 use crate::{
-    cleanup, click_sound,
+    Background, GameState, SoundEvent, cleanup, click_sound,
     help::has_user_input,
-    highscores::{check_and_update_highscores, HighScores},
-    Background, GameState, SoundEvent,
+    highscores::{HighScores, check_and_update_highscores},
 };
 use bevy::{
     math::bounding::{Aabb2d, IntersectsVolume},
@@ -21,6 +20,7 @@ use squirrel::Squirrel;
 
 use self::level::GameObject;
 
+mod anim;
 mod bob;
 mod castle;
 mod coin;
@@ -83,7 +83,7 @@ impl Plugin for GamePlugin {
                 Update,
                 (
                     coin_sound
-                        .run_if(resource_changed::<Points>.and_then(not(resource_added::<Points>))),
+                        .run_if(resource_changed::<Points>.and(not(resource_added::<Points>))),
                     game_ui::update_score_text.run_if(resource_changed::<Points>),
                     bob::animate_bob,
                     bob::update_bob,
@@ -100,7 +100,7 @@ impl Plugin for GamePlugin {
                     check_castle_collisions,
                     cleanup_objects,
                 )
-                    .run_if(in_state(GameState::Playing).and_then(in_state(PlayState::Running))),
+                    .run_if(in_state(GameState::Playing).and(in_state(PlayState::Running))),
             )
             .add_systems(
                 Update,
@@ -108,7 +108,7 @@ impl Plugin for GamePlugin {
                     game_ui::go_back_to_menu.run_if(has_user_input),
                     bob::update_bob,
                 )
-                    .run_if(in_state(GameState::Playing).and_then(in_state(PlayState::GameOver))),
+                    .run_if(in_state(GameState::Playing).and(in_state(PlayState::GameOver))),
             )
             .add_systems(
                 OnEnter(PlayState::GameOver),
@@ -135,7 +135,7 @@ fn spawn_objects(
     mut game_objects: ResMut<GameObjects>,
     camera_query: Query<&Transform, With<Camera>>,
 ) {
-    let max_y = camera_query.single().translation.y + 1.1 * 480.0;
+    let max_y = camera_query.single().unwrap().translation.y + 1.1 * 480.0;
 
     for object in &mut game_objects.0 {
         // Only spawn objects that are on screen and a 10% above
@@ -195,14 +195,14 @@ fn cleanup_objects(
     mut dynamic_objects: Query<(Entity, &Transform), With<GameDynamicEntity>>,
     camera_query: Query<&Transform, With<Camera>>,
 ) {
-    let min_y = camera_query.single().translation.y - 1.2 * 240.0;
+    let min_y = camera_query.single().unwrap().translation.y - 1.2 * 240.0;
 
     game_objects.0.retain(|o| !o.is_spawned);
 
     for (entity, transform) in &mut dynamic_objects {
         // Despawn objects that are below screen's bottom
         if transform.translation.y < min_y {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
         }
     }
 }
@@ -210,10 +210,10 @@ fn cleanup_objects(
 fn check_platform_collisions(
     mut bob_query: Query<(&Transform, &mut Bob), With<Bob>>,
     mut platforms_query: Query<(&Transform, &mut Platform), With<Platform>>,
-    mut sound_events: EventWriter<SoundEvent>,
+    mut sound_events: MessageWriter<SoundEvent>,
     time: Res<Time>,
 ) {
-    let (&bob_transform, mut bob) = bob_query.single_mut();
+    let (&bob_transform, mut bob) = bob_query.single_mut().unwrap();
     if bob.velocity.y > 0.0 {
         return;
     }
@@ -228,11 +228,11 @@ fn check_platform_collisions(
         if collision {
             bob.velocity.y = bob::BOB_JUMP_VELOCITY;
 
-            sound_events.send(SoundEvent::Jump);
+            sound_events.write(SoundEvent::Jump);
 
             let mut rng = rand::thread_rng();
             if rng.gen_range(0.0..1.0) > 0.5 {
-                platform.state = platform::PlatformState::Pulverizing(time.elapsed_seconds());
+                platform.state = platform::PlatformState::Pulverizing(time.elapsed_secs());
             }
             return;
         }
@@ -242,23 +242,24 @@ fn check_platform_collisions(
 fn check_spring_collisions(
     mut bob_query: Query<(&Transform, &mut Bob), With<Bob>>,
     springs_query: Query<&Transform, With<Spring>>,
-    mut sound_events: EventWriter<SoundEvent>,
+    mut sound_events: MessageWriter<SoundEvent>,
 ) {
-    let (&bob_transform, mut bob) = bob_query.single_mut();
+    let (&bob_transform, mut bob) = bob_query.single_mut().unwrap();
 
     if bob.velocity.y > 0.0 {
         return;
     }
 
     for &spring_transform in &springs_query {
-        let collision =
-            Aabb2d::new(bob_transform.translation.truncate(), bob::BOB_SIZE / 2.).intersects(
-                &Aabb2d::new(spring_transform.translation.truncate(), spring::SPRING_SIZE / 2.),
-            );
+        let collision = Aabb2d::new(bob_transform.translation.truncate(), bob::BOB_SIZE / 2.)
+            .intersects(&Aabb2d::new(
+                spring_transform.translation.truncate(),
+                spring::SPRING_SIZE / 2.,
+            ));
 
         if collision {
             bob.velocity.y = bob::BOB_JUMP_VELOCITY * 1.5;
-            sound_events.send(SoundEvent::Highjump);
+            sound_events.write(SoundEvent::Highjump);
             return;
         }
     }
@@ -270,7 +271,7 @@ fn check_coin_collisions(
     mut points: ResMut<Points>,
     mut commands: Commands,
 ) {
-    let bob_transform = bob_query.single();
+    let bob_transform = bob_query.single().unwrap();
     for (entity, &coin_transform) in &mut coins_query {
         let collision =
             Aabb2d::new(bob_transform.translation.truncate(), bob::BOB_SIZE / 2.).intersects(
@@ -279,7 +280,7 @@ fn check_coin_collisions(
 
         if collision {
             points.0 += coin::COIN_SCORE;
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
         }
     }
 }
@@ -287,10 +288,10 @@ fn check_coin_collisions(
 fn check_squirrel_collisions(
     bob_query: Query<&Transform, With<Bob>>,
     mut squirrels_query: Query<&Transform, With<Squirrel>>,
-    mut sound_events: EventWriter<SoundEvent>,
+    mut sound_events: MessageWriter<SoundEvent>,
     mut play_state: ResMut<NextState<PlayState>>,
 ) {
-    let bob_transform = bob_query.single();
+    let bob_transform = bob_query.single().unwrap();
     for &squirrel_transform in &mut squirrels_query {
         let collision = Aabb2d::new(bob_transform.translation.truncate(), bob::BOB_SIZE / 2.)
             .intersects(&Aabb2d::new(
@@ -299,7 +300,7 @@ fn check_squirrel_collisions(
             ));
 
         if collision {
-            sound_events.send(SoundEvent::Hit);
+            sound_events.write(SoundEvent::Hit);
             play_state.set(PlayState::GameOver);
             return;
         }
@@ -314,12 +315,13 @@ fn check_castle_collisions(
     mut high_scores: ResMut<HighScores>,
     mut play_state: ResMut<NextState<PlayState>>,
 ) {
-    let bob_transform = bob_query.single();
+    let bob_transform = bob_query.single().unwrap();
     for castle_transform in &castles_query {
-        let collision =
-            Aabb2d::new(bob_transform.translation.truncate(), bob::BOB_SIZE / 2.).intersects(
-                &Aabb2d::new(castle_transform.translation.truncate(), castle::CASTLE_SIZE / 2.),
-            );
+        let collision = Aabb2d::new(bob_transform.translation.truncate(), bob::BOB_SIZE / 2.)
+            .intersects(&Aabb2d::new(
+                castle_transform.translation.truncate(),
+                castle::CASTLE_SIZE / 2.,
+            ));
 
         if collision {
             check_and_update_highscores(&mut high_scores, points.0);
@@ -334,7 +336,7 @@ fn move_objects(
     time: Res<Time>,
 ) {
     for (mut obj, mut transform) in &mut objects_query {
-        transform.translation.x += obj.velocity_x * obj.dir * time.delta_seconds();
+        transform.translation.x += obj.velocity_x * obj.dir * time.delta_secs();
 
         if transform.translation.x + obj.width / 2.0 > 160.0 {
             obj.dir = -1.0;
@@ -344,8 +346,8 @@ fn move_objects(
     }
 }
 
-fn coin_sound(mut sound_events: EventWriter<SoundEvent>) {
-    sound_events.send(SoundEvent::Coin);
+fn coin_sound(mut sound_events: MessageWriter<SoundEvent>) {
+    sound_events.write(SoundEvent::Coin);
 }
 
 fn reset_play(
@@ -353,7 +355,7 @@ fn reset_play(
     mut bg_query: Query<&mut Transform, (With<Background>, Without<Camera>)>,
     mut points: ResMut<Points>,
 ) {
-    camera_query.single_mut().translation.y = 0.0;
-    bg_query.single_mut().translation.y = 0.0;
+    camera_query.single_mut().unwrap().translation.y = 0.0;
+    bg_query.single_mut().unwrap().translation.y = 0.0;
     points.0 = 0;
 }

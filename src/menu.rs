@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 
 use crate::{
-    cleanup, click_sound, settings::write_sound_setting, GameMusic, GameState, SoundEnabled,
+    GameMusic, GameState, SoundEnabled, cleanup, click_sound, settings::write_sound_setting,
 };
 use bevy::{audio::Volume, prelude::*};
 
@@ -19,12 +19,7 @@ enum MenuButtonAction {
     SoundToggle,
 }
 
-const TRANSPARENT: Color = Color::Rgba {
-    red: 0.0,
-    green: 0.0,
-    blue: 0.0,
-    alpha: 0.0,
-};
+const TRANSPARENT: Color = Color::linear_rgba(0.0, 0.0, 0.0, 0.0);
 
 pub struct MenuPlugin;
 impl Plugin for MenuPlugin {
@@ -39,8 +34,7 @@ impl Plugin for MenuPlugin {
                 (
                     menu_action,
                     click_sound.run_if(
-                        resource_changed::<SoundEnabled>
-                            .and_then(not(resource_added::<SoundEnabled>)),
+                        resource_changed::<SoundEnabled>.and(not(resource_added::<SoundEnabled>)),
                     ),
                 )
                     .run_if(in_state(GameState::Menu)),
@@ -55,31 +49,27 @@ fn setup_menu(
 ) {
     commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    flex_direction: FlexDirection::Column,
-                    ..default()
-                },
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                flex_direction: FlexDirection::Column,
                 ..default()
             },
             MenuEntity,
         ))
         .with_children(|parent| {
             let logo = asset_server.load("sprites/logo.png");
-            parent.spawn(ImageBundle {
-                style: Style {
+            parent.spawn((
+                ImageNode::new(logo),
+                Node {
                     height: Val::Percent(30.0),
                     position_type: PositionType::Absolute,
                     top: Val::Px(10.0),
                     ..default()
                 },
-                image: UiImage::new(logo),
-                ..default()
-            });
+            ));
 
             for (action, text) in [
                 (MenuButtonAction::Play, "PLAY"),
@@ -87,40 +77,33 @@ fn setup_menu(
                 (MenuButtonAction::Help, "HELP"),
             ] {
                 parent
-                    .spawn((
-                        ButtonBundle {
-                            background_color: TRANSPARENT.into(),
-                            ..default()
-                        },
-                        action,
-                    ))
+                    .spawn((Button, BackgroundColor(TRANSPARENT), action))
                     .with_children(|parent| {
-                        parent.spawn(
-                            TextBundle::from_section(
-                                text,
-                                TextStyle {
-                                    font: asset_server.load("fonts/Retroville NC.ttf"),
-                                    font_size: 40.0,
-                                    color: Color::WHITE,
-                                },
-                            )
-                            .with_text_justify(JustifyText::Center),
-                        );
+                        parent.spawn((
+                            Text::new(text),
+                            TextFont {
+                                font: asset_server.load("fonts/Retroville NC.ttf"),
+                                font_size: 40.0,
+                                ..default()
+                            },
+                            TextColor(Color::WHITE),
+                            TextLayout::new_with_justify(Justify::Center),
+                        ));
                     });
             }
 
             parent
                 .spawn((
-                    ButtonBundle {
-                        style: Style {
-                            position_type: PositionType::Absolute,
-                            left: Val::Px(10.0),
-                            bottom: Val::Px(10.0),
-                            ..default()
-                        },
-                        background_color: TRANSPARENT.into(),
+                    Button,
+                    Node {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(10.0),
+                        bottom: Val::Px(10.0),
+                        width: Val::Px(64.0),
+                        height: Val::Px(64.0),
                         ..default()
                     },
+                    BackgroundColor(TRANSPARENT),
                     MenuButtonAction::SoundToggle,
                 ))
                 .with_children(|parent| {
@@ -130,13 +113,7 @@ fn setup_menu(
                         "sprites/soundOff.png"
                     };
                     let icon = asset_server.load(path);
-                    parent.spawn((
-                        ImageBundle {
-                            image: UiImage::new(icon),
-                            ..default()
-                        },
-                        SoundButton,
-                    ));
+                    parent.spawn((ImageNode::new(icon), SoundButton));
                 });
         });
 }
@@ -147,9 +124,9 @@ fn menu_action(
         (Changed<Interaction>, With<Button>),
     >,
     mut game_state: ResMut<NextState<GameState>>,
-    music_query: Query<&AudioSink, With<GameMusic>>,
+    mut music_query: Query<&mut AudioSink, With<GameMusic>>,
     mut sound_enabled: ResMut<SoundEnabled>,
-    mut sound_button_query: Query<(Entity, &mut UiImage), With<SoundButton>>,
+    mut sound_button_query: Query<(Entity, &mut ImageNode), With<SoundButton>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
@@ -160,26 +137,24 @@ fn menu_action(
                 MenuButtonAction::HighScores => game_state.set(GameState::HighScores),
                 MenuButtonAction::Help => game_state.set(GameState::Help),
                 MenuButtonAction::SoundToggle => {
-                    if let Ok(sink) = music_query.get_single() {
-                        sink.toggle();
+                    if let Ok(mut sink) = music_query.single_mut() {
+                        sink.toggle_mute();
                     } else {
                         commands.spawn((
-                            AudioBundle {
-                                source: asset_server.load("audio/music.ogg"),
-                                settings: PlaybackSettings::LOOP.with_volume(Volume::new(0.1)),
-                            },
+                            AudioPlayer::<AudioSource>(asset_server.load("audio/music.ogg")),
+                            PlaybackSettings::LOOP.with_volume(Volume::Linear(0.1)),
                             GameMusic,
                         ));
                     }
                     sound_enabled.0 = !sound_enabled.0;
 
-                    let (_, mut ui_image) = sound_button_query.single_mut();
+                    let (_, mut ui_image) = sound_button_query.single_mut().unwrap();
                     let path = if sound_enabled.0 {
                         "sprites/soundOn.png"
                     } else {
                         "sprites/soundOff.png"
                     };
-                    *ui_image = UiImage::new(asset_server.load(path));
+                    *ui_image = ImageNode::new(asset_server.load(path));
 
                     write_sound_setting(sound_enabled.0);
                 }

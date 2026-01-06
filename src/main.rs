@@ -1,6 +1,7 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+//#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use bevy::{audio::Volume, prelude::*, render::camera::ScalingMode, window::WindowResolution};
+use bevy::camera::ScalingMode;
+use bevy::{audio::Volume, prelude::*, window::WindowResolution};
 use settings::read_settings;
 
 mod game;
@@ -35,7 +36,7 @@ struct AudioHandles {
     hit: Handle<AudioSource>,
 }
 
-#[derive(Event, Default)]
+#[derive(Message, Default)]
 enum SoundEvent {
     #[default]
     Click,
@@ -61,7 +62,7 @@ fn main() {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: String::from("Super Jumper"),
-                        resolution: WindowResolution::new(400.0, 600.0),
+                        resolution: WindowResolution::new(400, 600),
                         resizable: true,
                         ..default()
                     }),
@@ -71,12 +72,12 @@ fn main() {
         )
         .init_resource::<SoundEnabled>()
         .init_state::<GameState>()
-        .add_event::<SoundEvent>()
+        .add_message::<SoundEvent>()
         .add_systems(Startup, (scene_setup, play_music))
         .add_systems(Update, handle_sound_event)
         .add_plugins((
             bevy::diagnostic::LogDiagnosticsPlugin::default(),
-            bevy::diagnostic::FrameTimeDiagnosticsPlugin,
+            bevy::diagnostic::FrameTimeDiagnosticsPlugin::default(),
             menu::MenuPlugin,
             help::HelpPlugin,
             game::GamePlugin,
@@ -88,18 +89,27 @@ fn main() {
 
 fn scene_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Spawn a 2D camera
-    let mut game_2d_camera_bundle = Camera2dBundle::default();
-    game_2d_camera_bundle.projection.scaling_mode = ScalingMode::FixedVertical(480.0);
-    game_2d_camera_bundle.transform = Transform::from_xyz(0.0, 0.0, 0.0);
-    commands.spawn(game_2d_camera_bundle);
+
+    // game_2d_camera.projection.scaling_mode = ScalingMode::FixedVertical(480.0);
+    // game_2d_camera.transform = Transform::from_xyz(0.0, 0.0, 0.0);
+    commands.spawn((
+        Camera2d,
+        Transform::from_xyz(0.0, 0.0, 0.0),
+        Projection::Orthographic(OrthographicProjection {
+            scaling_mode: ScalingMode::FixedVertical {
+                viewport_height: 480.0,
+            },
+            ..OrthographicProjection::default_2d()
+        }),
+    ));
 
     // Spawn the background sprite
     commands.spawn((
-        SpriteBundle {
-            texture: asset_server.load("sprites/background.png"),
-            ..Default::default()
-        },
         Background,
+        Sprite::from_atlas_image(
+            asset_server.load("sprites/background.png"),
+            TextureAtlas { ..default() },
+        ),
     ));
 
     // Load audio files
@@ -115,7 +125,7 @@ fn scene_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 // Despawn all entities recursively with a given component
 pub fn cleanup<T: Component>(mut commands: Commands, query: Query<Entity, With<T>>) {
     for entity in query.iter() {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 }
 
@@ -126,10 +136,8 @@ fn play_music(
 ) {
     if sound_enabled.0 {
         commands.spawn((
-            AudioBundle {
-                source: asset_server.load("audio/music.ogg"),
-                settings: PlaybackSettings::LOOP.with_volume(Volume::new(0.1)),
-            },
+            AudioPlayer::<AudioSource>(asset_server.load("audio/music.ogg")),
+            PlaybackSettings::LOOP.with_volume(Volume::Linear(0.1)),
             GameMusic,
         ));
     }
@@ -138,7 +146,7 @@ fn play_music(
 fn handle_sound_event(
     mut commands: Commands,
     audio_handles: Res<AudioHandles>,
-    mut sound_events: EventReader<SoundEvent>,
+    mut sound_events: MessageReader<SoundEvent>,
     sound_enabled: Res<SoundEnabled>,
 ) {
     if !sound_events.is_empty() {
@@ -151,10 +159,7 @@ fn handle_sound_event(
                     SoundEvent::Highjump => audio_handles.highjump.clone(),
                     SoundEvent::Hit => audio_handles.hit.clone(),
                 };
-                commands.spawn(AudioBundle {
-                    source,
-                    ..default()
-                });
+                commands.spawn(AudioPlayer::<AudioSource>(source));
             }
         }
         sound_events.clear();
@@ -167,9 +172,6 @@ fn click_sound(
     sound_enabled: Res<SoundEnabled>,
 ) {
     if sound_enabled.0 {
-        commands.spawn(AudioBundle {
-            source: audio_handles.click.clone(),
-            ..default()
-        });
+        commands.spawn(AudioPlayer::<AudioSource>(audio_handles.click.clone()));
     }
 }

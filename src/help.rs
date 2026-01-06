@@ -1,4 +1,4 @@
-use crate::{cleanup, click_sound, GameState};
+use crate::{GameState, cleanup, click_sound};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -16,10 +16,10 @@ impl Plugin for HelpPlugin {
             .add_systems(
                 Update,
                 (
-                    show_next_screen.run_if(in_state(GameState::Help).and_then(has_user_input)),
+                    show_next_screen.run_if(in_state(GameState::Help).and(has_user_input)),
                     click_sound.run_if(
                         resource_changed::<HelpScreenIndex>
-                            .and_then(not(resource_added::<HelpScreenIndex>)),
+                            .and(not(resource_added::<HelpScreenIndex>)),
                     ),
                 ),
             );
@@ -28,12 +28,12 @@ impl Plugin for HelpPlugin {
 
 fn setup_help(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
-        SpriteBundle {
-            texture: asset_server.load("sprites/help1.png"),
-            transform: Transform::from_xyz(0.0, 0.0, 100.0),
-            ..Default::default()
-        },
         HelpEntity,
+        Sprite::from_atlas_image(
+            asset_server.load("sprites/help1.png"),
+            TextureAtlas { ..default() },
+        ),
+        Transform::from_xyz(0.0, 0.0, 100.0),
     ));
 }
 
@@ -46,12 +46,12 @@ fn show_next_screen(
     help_screen.0 += 1;
     if help_screen.0 < 5 {
         commands.spawn((
-            SpriteBundle {
-                texture: asset_server.load(format!("sprites/help{}.png", help_screen.0 + 1)),
-                transform: Transform::from_xyz(0.0, 0.0, 100.0 + (help_screen.0 as f32)),
-                ..Default::default()
-            },
             HelpEntity,
+            Sprite::from_atlas_image(
+                asset_server.load(format!("sprites/help{}.png", help_screen.0 + 1)),
+                TextureAtlas { ..default() },
+            ),
+            Transform::from_xyz(0.0, 0.0, 100.0 + (help_screen.0 as f32)),
         ));
     } else {
         help_screen.0 = 0;

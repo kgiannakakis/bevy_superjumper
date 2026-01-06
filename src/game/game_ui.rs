@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    highscores::{check_and_update_highscores, HighScores},
     GameState,
+    highscores::{HighScores, check_and_update_highscores},
 };
 
 use super::{GameEntity, PlayState, Points};
@@ -27,12 +27,7 @@ pub(super) enum PlayButtonAction {
     Pause,
 }
 
-const TRANSPARENT: Color = Color::Rgba {
-    red: 0.0,
-    green: 0.0,
-    blue: 0.0,
-    alpha: 0.0,
-};
+const TRANSPARENT: Color = Color::linear_rgba(0.0, 0.0, 0.0, 0.0);
 
 pub(super) fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Spawn the game UI
@@ -40,15 +35,12 @@ pub(super) fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
         .spawn((
             GameEntity,
             GameUi,
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    flex_direction: FlexDirection::Column,
-                    ..Default::default()
-                },
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                flex_direction: FlexDirection::Column,
                 ..Default::default()
             },
         ))
@@ -60,57 +52,50 @@ pub(super) fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
             ] {
                 parent
                     .spawn((
-                        ButtonBundle {
-                            background_color: TRANSPARENT.into(),
-                            visibility,
-                            ..default()
-                        },
+                        Button,
+                        BackgroundColor(TRANSPARENT),
+                        visibility,
                         GameButtonUi,
                         action,
                     ))
                     .with_children(|parent| {
-                        parent.spawn(
-                            TextBundle::from_section(
-                                text,
-                                TextStyle {
-                                    font: asset_server.load("fonts/Retroville NC.ttf"),
-                                    font_size: 40.0,
-                                    color: Color::WHITE,
-                                },
-                            )
-                            .with_text_justify(JustifyText::Center),
-                        );
+                        parent.spawn((
+                            Text::new(text),
+                            TextFont {
+                                font: asset_server.load("fonts/Retroville NC.ttf"),
+                                font_size: 40.0,
+                                ..default()
+                            },
+                            TextColor(Color::WHITE),
+                            TextLayout::new_with_justify(Justify::Center),
+                        ));
                     });
             }
 
             parent
                 .spawn((
-                    ButtonBundle {
-                        style: Style {
-                            position_type: PositionType::Absolute,
-                            top: Val::Px(10.0),
-                            right: Val::Px(10.0),
-                            ..default()
-                        },
-                        background_color: TRANSPARENT.into(),
-                        visibility: Visibility::Hidden,
+                    Button,
+                    Node {
+                        position_type: PositionType::Absolute,
+                        top: Val::Px(10.0),
+                        right: Val::Px(10.0),
+                        height: Val::Px(64.0),
+                        width: Val::Px(64.0),
                         ..default()
                     },
+                    Visibility::Hidden,
                     GameButtonUi,
                     PlayButtonAction::Pause,
                 ))
                 .with_children(|parent| {
                     let path = "sprites/pause.png";
                     let icon = asset_server.load(path);
-                    parent.spawn(ImageBundle {
-                        image: UiImage::new(icon),
-                        ..default()
-                    });
+                    parent.spawn(ImageNode::new(icon));
                 });
 
             parent
-                .spawn(NodeBundle {
-                    style: Style {
+                .spawn((
+                    Node {
                         flex_direction: FlexDirection::Column,
                         align_items: AlignItems::FlexStart,
                         position_type: PositionType::Absolute,
@@ -118,20 +103,18 @@ pub(super) fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                         left: Val::Px(10.0),
                         ..default()
                     },
-                    visibility: Visibility::Hidden,
-                    ..default()
-                })
+                    Visibility::Hidden,
+                ))
                 .with_children(|parent| {
                     parent.spawn((
-                        TextBundle::from_section(
-                            "SCORE: 0",
-                            TextStyle {
-                                font: asset_server.load("fonts/Retroville NC.ttf"),
-                                font_size: 30.0,
-                                color: Color::WHITE,
-                            },
-                        )
-                        .with_text_justify(JustifyText::Left),
+                        Text::new("SCORE: 0"),
+                        TextFont {
+                            font: asset_server.load("fonts/Retroville NC.ttf"),
+                            font_size: 30.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                        TextLayout::new_with_justify(Justify::Left),
                         ScoreUi,
                     ));
                 });
@@ -146,7 +129,7 @@ pub(super) fn spawn_game_over_ui(
     mut high_scores: ResMut<HighScores>,
 ) {
     for entity in game_ui_query.iter() {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 
     let score = points.0;
@@ -160,64 +143,55 @@ pub(super) fn spawn_game_over_ui(
         .spawn((
             GameEntity,
             GameOverUi,
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    flex_direction: FlexDirection::Column,
-                    ..Default::default()
-                },
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                flex_direction: FlexDirection::Column,
                 ..Default::default()
             },
         ))
         .with_children(|parent| {
             parent
-                .spawn(NodeBundle {
-                    style: Style {
-                        flex_direction: FlexDirection::Column,
-                        align_items: AlignItems::Center,
-                        position_type: PositionType::Absolute,
-                        top: Val::Px(10.0),
-                        ..default()
-                    },
+                .spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Center,
+                    position_type: PositionType::Absolute,
+                    top: Val::Px(10.0),
                     ..default()
                 })
                 .with_children(|parent| {
                     parent.spawn((
-                        TextBundle::from_section(
-                            score_title,
-                            TextStyle {
-                                font: asset_server.load("fonts/Retroville NC.ttf"),
-                                font_size: 30.0,
-                                color: Color::WHITE,
-                            },
-                        )
-                        .with_text_justify(JustifyText::Left),
+                        Text::new(score_title),
+                        TextFont {
+                            font: asset_server.load("fonts/Retroville NC.ttf"),
+                            font_size: 30.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                        TextLayout::new_with_justify(Justify::Left),
                         ScoreUi,
                     ));
                 });
 
             parent
-                .spawn(NodeBundle {
-                    style: Style {
-                        flex_direction: FlexDirection::Column,
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
+                .spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Center,
                     ..default()
                 })
                 .with_children(|parent| {
-                    parent.spawn((TextBundle::from_section(
-                        "GAME OVER",
-                        TextStyle {
+                    parent.spawn((
+                        Text::new("GAME OVER"),
+                        TextFont {
                             font: asset_server.load("fonts/Retroville NC.ttf"),
                             font_size: 40.0,
-                            color: Color::WHITE,
+                            ..default()
                         },
-                    )
-                    .with_text_justify(JustifyText::Left),));
+                        TextColor(Color::WHITE),
+                        TextLayout::new_with_justify(Justify::Left),
+                    ));
                 });
         });
 }
@@ -269,7 +243,7 @@ pub(super) fn update_buttons_visibility(
         }
     }
 
-    *score_visibility_query.single_mut().1 = if *play_state != PlayState::Ready {
+    *score_visibility_query.single_mut().unwrap().1 = if *play_state != PlayState::Ready {
         Visibility::Visible
     } else {
         Visibility::Hidden
@@ -294,7 +268,7 @@ pub(super) fn ui_action(
                 PlayButtonAction::Quit => {
                     check_and_update_highscores(&mut high_scores, points.0);
                     play_state.set(PlayState::Ready);
-                    game_state.set(GameState::Menu);
+                    game_state.set(GameState::WinScreen); //TODO: Fix this
                 }
                 PlayButtonAction::Pause => play_state.set(PlayState::Paused),
             }
@@ -302,10 +276,13 @@ pub(super) fn ui_action(
     }
 }
 
-pub(super) fn update_score_text(mut query: Query<&mut Text, With<ScoreUi>>, points: Res<Points>) {
-    for mut text in &mut query {
-        text.sections[0].value = format!("SCORE: {}", points.0);
-    }
+pub(super) fn update_score_text(
+    query: Query<Entity, With<ScoreUi>>,
+    mut writer: TextUiWriter,
+    points: Res<Points>,
+) {
+    let entity = query.single().unwrap();
+    *writer.text(entity, 0) = format!("SCORE: {}", points.0);
 }
 
 pub(super) fn go_back_to_menu(

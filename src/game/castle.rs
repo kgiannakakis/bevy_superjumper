@@ -18,10 +18,7 @@ pub(super) fn spawn_castle(
         Castle,
         GameEntity,
         GameDynamicEntity,
-        SpriteBundle {
-            texture: castle_texture,
-            transform: Transform::from_xyz(position.x, position.y, 20.0),
-            ..Default::default()
-        },
+        Sprite::from_atlas_image(castle_texture, TextureAtlas { ..default() }),
+        Transform::from_xyz(position.x, position.y, 20.0),
     ));
 }

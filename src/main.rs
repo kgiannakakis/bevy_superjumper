@@ -106,10 +106,7 @@ fn scene_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Spawn the background sprite
     commands.spawn((
         Background,
-        Sprite::from_atlas_image(
-            asset_server.load("sprites/background.png"),
-            TextureAtlas { ..default() },
-        ),
+        Sprite::from_image(asset_server.load("sprites/background.png")),
     ));
 
     // Load audio files

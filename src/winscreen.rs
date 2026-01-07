@@ -49,10 +49,7 @@ fn setup_winscreen(
 ) {
     commands.spawn((
         WinScreenEntity,
-        Sprite::from_atlas_image(
-            asset_server.load("sprites/castle.png"),
-            TextureAtlas { ..default() },
-        ),
+        Sprite::from_image(asset_server.load("sprites/castle.png")),
         Transform::from_xyz(0.0, 0.0, 100.0).with_scale(Vec3::new(3.0, 3.0, 1.0)),
     ));
 
@@ -81,10 +78,7 @@ fn setup_winscreen(
 
     commands.spawn((
         WinScreenEntity,
-        Sprite::from_atlas_image(
-            asset_server.load("sprites/princess.png"),
-            TextureAtlas { ..default() },
-        ),
+        Sprite::from_image(asset_server.load("sprites/princess.png")),
         Transform::from_xyz(20.0, -5.0, 110.0)
             .with_rotation(Quat::from_rotation_y(std::f32::consts::PI)),
     ));

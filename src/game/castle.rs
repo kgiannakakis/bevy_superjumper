@@ -18,7 +18,7 @@ pub(super) fn spawn_castle(
         Castle,
         GameEntity,
         GameDynamicEntity,
-        Sprite::from_atlas_image(castle_texture, TextureAtlas { ..default() }),
+        Sprite::from_image(castle_texture),
         Transform::from_xyz(position.x, position.y, 20.0),
     ));
 }

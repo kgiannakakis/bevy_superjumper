@@ -29,10 +29,7 @@ impl Plugin for HelpPlugin {
 fn setup_help(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         HelpEntity,
-        Sprite::from_atlas_image(
-            asset_server.load("sprites/help1.png"),
-            TextureAtlas { ..default() },
-        ),
+        Sprite::from_image(asset_server.load("sprites/help1.png")),
         Transform::from_xyz(0.0, 0.0, 100.0),
     ));
 }
@@ -47,10 +44,7 @@ fn show_next_screen(
     if help_screen.0 < 5 {
         commands.spawn((
             HelpEntity,
-            Sprite::from_atlas_image(
-                asset_server.load(format!("sprites/help{}.png", help_screen.0 + 1)),
-                TextureAtlas { ..default() },
-            ),
+            Sprite::from_image(asset_server.load(format!("sprites/help{}.png", help_screen.0 + 1))),
             Transform::from_xyz(0.0, 0.0, 100.0 + (help_screen.0 as f32)),
         ));
     } else {

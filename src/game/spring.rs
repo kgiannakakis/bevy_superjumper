@@ -19,7 +19,7 @@ pub(super) fn spawn_spring(
         Spring,
         GameEntity,
         GameDynamicEntity,
-        Sprite::from_atlas_image(spring_texture, TextureAtlas { ..default() }),
+        Sprite::from_image(spring_texture),
         Transform::from_xyz(position.x, position.y, 20.0),
     ));
 }

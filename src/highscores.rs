@@ -49,25 +49,16 @@ fn setup_highscores(
             HighScoresEntity,
         ))
         .with_children(|parent| {
-            parent.spawn(
-                (
-                    Text::new("HIGHSCORES"),
-                    TextFont {
-                        font: asset_server.load("fonts/Retroville NC.ttf"),
-                        font_size: 40.0,
-                        ..default()
-                    },
-                    TextColor(Color::WHITE),
-                ), // TextBundle::from_section(
-                   //     "HIGHSCORES",
-                   //     TextStyle {
-                   //         font: asset_server.load("fonts/Retroville NC.ttf"),
-                   //         font_size: 40.0,
-                   //         color: Color::WHITE,
-                   //     },
-                   // )
-                   // .with_text_justify(JustifyText::Center),
-            );
+            parent.spawn((
+                Text::new("HIGHSCORES"),
+                TextFont {
+                    font: asset_server.load("fonts/Retroville NC.ttf"),
+                    font_size: 40.0,
+                    ..default()
+                },
+                TextColor(Color::WHITE),
+                TextLayout::new_with_justify(Justify::Center),
+            ));
 
             parent
                 .spawn(Node {
@@ -77,58 +68,36 @@ fn setup_highscores(
                 })
                 .with_children(|parent| {
                     for (i, score) in high_scores.0.into_iter().enumerate() {
-                        parent.spawn(
-                            (
-                                Text::new(format!("{}. {}", i + 1, score)),
-                                TextFont {
-                                    font: asset_server.load("fonts/Retroville NC.ttf"),
-                                    font_size: 30.0,
-                                    ..default()
-                                },
-                                TextColor(Color::WHITE),
-                            ), // TextBundle::from_section(
-                               //     format!("{}. {}", i + 1, score),
-                               //     TextStyle {
-                               //         font: asset_server.load("fonts/Retroville NC.ttf"),
-                               //         font_size: 30.0,
-                               //         color: Color::WHITE,
-                               //     },
-                               // )
-                               // .with_text_justify(JustifyText::Left),
-                        );
+                        parent.spawn((
+                            Text::new(format!("{}. {}", i + 1, score)),
+                            TextFont {
+                                font: asset_server.load("fonts/Retroville NC.ttf"),
+                                font_size: 30.0,
+                                ..default()
+                            },
+                            TextColor(Color::WHITE),
+                            TextLayout::new_with_justify(Justify::Center),
+                        ));
                     }
                 });
 
             parent
-                .spawn(
-                    (
-                        Button,
-                        Node {
-                            position_type: PositionType::Absolute,
-                            left: Val::Px(10.0),
-                            bottom: Val::Px(10.0),
-                            ..default()
-                        },
-                        BackgroundColor(TRANSPARENT),
-                    ), //     ButtonBundle {
-                       //     style: Style {
-                       //         position_type: PositionType::Absolute,
-                       //         left: Val::Px(10.0),
-                       //         bottom: Val::Px(10.0),
-                       //         ..default()
-                       //     },
-                       //     background_color: TRANSPARENT.into(),
-                       //     ..default()
-                       // }
-                )
+                .spawn((
+                    Button,
+                    Node {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(10.0),
+                        bottom: Val::Px(10.0),
+                        width: Val::Px(64.0),
+                        height: Val::Px(64.0),
+
+                        ..default()
+                    },
+                    BackgroundColor(TRANSPARENT),
+                ))
                 .with_children(|parent| {
                     let icon = asset_server.load("sprites/back.png");
-                    parent.spawn(
-                        (ImageNode::new(icon),), //     ImageBundle {
-                                                 //     image: UiImage::new(icon),
-                                                 //     ..default()
-                                                 // }
-                    );
+                    parent.spawn((ImageNode::new(icon),));
                 });
         });
 }

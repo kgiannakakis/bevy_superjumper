@@ -3,7 +3,7 @@ use crate::game::anim::{AnimationIndices, AnimationTimer};
 use super::{GameDynamicEntity, GameEntity, MovingObject};
 use bevy::prelude::*;
 
-const PLATFORM_ANIMATION_SPEED: f32 = 10.0;
+//const PLATFORM_ANIMATION_SPEED: f32 = 10.0;
 pub const PLATFORM_HEIGHT: f32 = 16.0;
 pub const PLATFORM_WIDTH: f32 = 64.0;
 pub const PLATFORM_SIZE: Vec2 = Vec2::new(PLATFORM_WIDTH, PLATFORM_HEIGHT);
@@ -77,17 +77,31 @@ pub(super) fn spawn_platform(
 
 pub(super) fn animate_platforms(
     mut commands: Commands,
-    mut platform_query: Query<(Entity, &Platform), With<Platform>>,
+    //mut platform_query: Query<(Entity, &Platform), With<Platform>>,
+    mut platform_query: Query<
+        (
+            &AnimationIndices,
+            &mut AnimationTimer,
+            Entity,
+            &mut Sprite,
+            &Platform,
+        ),
+        With<Platform>,
+    >,
     time: Res<Time>,
 ) {
-    for (entity, platform) in &mut platform_query {
-        if let PlatformState::Pulverizing(start_time) = platform.state {
-            let index =
-                1 + (((time.elapsed_secs() - start_time) * PLATFORM_ANIMATION_SPEED) as usize) % 5;
-            if index >= 4 {
-                commands.entity(entity).despawn();
-            } else {
-                //platform_ta.index = index;
+    for (indices, mut timer, entity, mut sprite, platform) in &mut platform_query {
+        if let PlatformState::Pulverizing(_start_time) = platform.state {
+            timer.tick(time.delta());
+
+            if timer.just_finished()
+                && let Some(atlas) = &mut sprite.texture_atlas
+            {
+                if atlas.index == indices.last {
+                    commands.entity(entity).despawn();
+                } else {
+                    atlas.index += 1;
+                }
             }
         }
     }
